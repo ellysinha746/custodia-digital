@@ -16,6 +16,8 @@ class ArchivoOut(BaseModel):
     metadatos: Optional[Any] = None
     estado_procesamiento: EstadoProcesamientoEnum
     subido_en: datetime
+    ficha_dispositivo: Optional[Dict[str, Any]] = None
+    ficha_registrada_en: Optional[datetime] = None
 
     class Config:
         from_attributes = True

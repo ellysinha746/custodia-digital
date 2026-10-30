@@ -132,14 +132,23 @@ def notificar_alerta(alerta_id: UUID) -> None:
         fecha = alerta.creada_en.astimezone(timezone.utc).strftime("%d/%m/%Y %H:%M:%S UTC")
         origen = "verificación manual" if alerta.origen == "verificacion_manual" else "escaneo automático"
         asunto = f"[CustodiaDigital] Alerta de integridad - Caso {caso.numero_caso}"
+        if alerta.tipo == "dispositivo_sustituido":
+            # Sprint 4 (historia 13): la ficha del dispositivo no coincide.
+            intro = "La ficha del dispositivo de origen no coincide con la registrada en la subida.\n\n"
+            lineas_hash = ""
+        else:
+            intro = "Se detectó un cambio en una evidencia sin un registro de custodia que lo respalde.\n\n"
+            lineas_hash = (
+                f"Hash esperado:   {alerta.hash_esperado}\n"
+                f"Hash encontrado: {alerta.hash_encontrado or '(archivo inexistente)'}\n"
+            )
         cuerpo = (
-            "Se detectó un cambio en una evidencia sin un registro de custodia que lo respalde.\n\n"
-            f"Caso:            {caso.numero_caso}\n"
+            intro
+            + f"Caso:            {caso.numero_caso}\n"
             f"Archivo:         {archivo.nombre_original}\n"
             f"Afectado:        {alerta.ubicacion}\n"
-            f"Hash esperado:   {alerta.hash_esperado}\n"
-            f"Hash encontrado: {alerta.hash_encontrado or '(archivo inexistente)'}\n"
-            f"Detectado por:   {origen}\n"
+            + lineas_hash
+            + f"Detectado por:   {origen}\n"
             f"Fecha:           {fecha}\n\n"
             f"{alerta.detalle}\n\n"
             "Revisa la sección Alertas de CustodiaDigital para investigar y marcarla como atendida."
