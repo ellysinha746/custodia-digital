@@ -14,6 +14,7 @@ const UBICACION = {
   original: "Original",
   copia: "Copia de trabajo",
   ambos: "Original y copia",
+  dispositivo: "Dispositivo",
 };
 
 function hashCorto(h) {
@@ -89,7 +90,7 @@ export default function Alertas() {
         <div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface">Alertas de integridad</h1>
           <p className="font-body-sm text-body-sm text-on-surface-variant">
-            Cambios de hash detectados sin un registro de custodia que los respalde.
+            Cambios de hash o del dispositivo de origen detectados sin un registro de custodia que los respalde.
           </p>
         </div>
         {esAdmin && (
@@ -151,12 +152,14 @@ export default function Alertas() {
                     </span>
                   </div>
                   <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">{a.detalle}</p>
-                  <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-label-code-sm text-label-code-sm">
-                    <span className="text-outline">Esperado</span>
-                    <span className="text-on-surface-variant">{hashCorto(a.hash_esperado)}</span>
-                    <span className="text-outline">Encontrado</span>
-                    <span className="text-error">{hashCorto(a.hash_encontrado)}</span>
-                  </div>
+                  {a.tipo === "hash_sin_respaldo" && (
+                    <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-label-code-sm text-label-code-sm">
+                      <span className="text-outline">Esperado</span>
+                      <span className="text-on-surface-variant">{hashCorto(a.hash_esperado)}</span>
+                      <span className="text-outline">Encontrado</span>
+                      <span className="text-error">{hashCorto(a.hash_encontrado)}</span>
+                    </div>
+                  )}
                   <div className="mt-2 flex items-center gap-3 flex-wrap font-label-code-sm text-label-code-sm text-outline">
                     <span>{new Date(a.creada_en).toLocaleString("es-PE")}</span>
                     <span>· {a.origen === "verificacion_manual" ? "Verificación manual" : "Escaneo automático"}</span>
