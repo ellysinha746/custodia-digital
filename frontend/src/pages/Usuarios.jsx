@@ -18,10 +18,14 @@ const DESCRIPCION_ROL = {
   admin: "Gestiona usuarios, ve todo, atiende alertas y el dashboard.",
   perito: "Crea casos, sube evidencia, verifica y registra fichas en sus casos.",
   perito_parte: "Solo ve los casos donde lo designen y formula observaciones (CPP art. 177).",
-  fiscal: "Solo lectura de todos los casos, auditoría y reportes.",
+  fiscal: "Ve todos los casos y dirige el trámite pericial: designa, corre traslado, subroga y concluye.",
 };
 
-const VACIO = { nombre: "", email: "", password: "", especialidad: "telefonia", rol: "perito" };
+const VACIO = {
+  nombre: "", email: "", password: "", especialidad: "telefonia", rol: "perito",
+  institucion: "", registro_profesional: "", telefono: "",
+};
+const ES_PERITO_ROL = (rol) => rol === "perito" || rol === "perito_parte";
 
 const claseInput =
   "px-2.5 py-2 rounded-md bg-surface-container-lowest text-on-surface font-body-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-primary/50";
@@ -131,6 +135,13 @@ export default function Usuarios() {
             </select>
             <p className="font-body-sm text-body-sm text-on-surface-variant self-center">{DESCRIPCION_ROL[form.rol]}</p>
           </div>
+          {ES_PERITO_ROL(form.rol) && (
+            <div className="grid sm:grid-cols-3 gap-space-sm">
+              <input placeholder="Institución (DIRCRI PNP, Medicina Legal…)" value={form.institucion} onChange={(e) => setForm({ ...form, institucion: e.target.value })} className={claseInput} />
+              <input placeholder="N° de registro / colegiatura" value={form.registro_profesional} onChange={(e) => setForm({ ...form, registro_profesional: e.target.value })} className={claseInput} />
+              <input placeholder="Teléfono" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} className={claseInput} />
+            </div>
+          )}
           <div className="flex justify-end gap-space-sm">
             <button type="button" onClick={() => setFormAbierto(false)} className="px-3 py-1.5 rounded-lg font-label-ui text-label-ui text-on-surface-variant hover:bg-surface-container">
               Cancelar
@@ -163,6 +174,11 @@ export default function Usuarios() {
                       {u.nombre} {esYo && <span className="text-outline font-normal">(tú)</span>}
                     </div>
                     <div className="font-label-code-sm text-label-code-sm text-outline">{u.email}</div>
+                    {(u.institucion || u.registro_profesional) && (
+                      <div className="font-label-code-sm text-label-code-sm text-outline">
+                        {[u.institucion, u.registro_profesional].filter(Boolean).join(" · ")}
+                      </div>
+                    )}
                   </td>
                   <td className="px-space-md py-3 font-body-sm text-body-sm text-on-surface-variant">
                     {ESPECIALIDADES[u.especialidad]}

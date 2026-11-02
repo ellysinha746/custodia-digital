@@ -6,6 +6,7 @@ import { useToast } from "../components/Toast";
 import FichaDispositivo, { CamposFicha } from "../components/FichaDispositivo";
 import VersionesObservadas from "../components/VersionesObservadas";
 import { puede, useUsuario } from "../permisos";
+import Pericias from "../components/Pericias";
 
 const ESPECIALIDADES = {
   audio: { label: "Audio", icon: "graphic_eq" },
@@ -597,6 +598,9 @@ export default function CasoDetalle() {
           {error && <p className="text-error font-body-sm text-body-sm mt-space-sm">{error}</p>}
         </div>
       )}
+
+      {/* Sprint 5 (épica H19): procedimiento pericial */}
+      <Pericias caso={caso} usuario={usuario} />
 
       <div className="bg-surface-container-low rounded-xl overflow-hidden">
         <div className="px-space-md py-3 flex items-center justify-between border-b border-outline-variant/20">

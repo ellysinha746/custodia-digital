@@ -32,7 +32,7 @@ def _obtener_caso(db: Session, caso_id: UUID, usuario_actual) -> Caso:
     caso = db.query(Caso).filter(Caso.id == caso_id, Caso.eliminado_en.is_(None)).first()
     if not caso:
         raise HTTPException(status_code=404, detail="Caso no encontrado.")
-    if not puede_ver_caso(usuario_actual, caso):
+    if not puede_ver_caso(db, usuario_actual, caso):
         raise HTTPException(status_code=404, detail="Caso no encontrado.")
     return caso
 

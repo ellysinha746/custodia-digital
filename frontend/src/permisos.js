@@ -9,7 +9,7 @@ export const ETIQUETAS_ROL = {
   admin: "Jefe de laboratorio",
   perito: "Perito oficial",
   perito_parte: "Perito de parte",
-  fiscal: "Fiscal / Auditor",
+  fiscal: "Fiscal",
 };
 
 const PERMISOS = {
@@ -27,7 +27,13 @@ const PERMISOS = {
   atender_alertas: ["admin"],
   ver_dashboard: ["admin"],
   gestionar_usuarios: ["admin"],
+  // Sprint 5 (épica H19): trámite pericial
+  gestionar_pericias: ["admin", "fiscal"],
+  ver_padron: ["admin", "fiscal"],
+  ver_perfil_ajeno: ["admin", "fiscal"],
 };
+
+export const ES_PERITO = (usuario) => !!usuario && ["perito", "perito_parte"].includes(usuario.rol);
 
 export function puede(usuario, accion) {
   return !!usuario && (PERMISOS[accion] || []).includes(usuario.rol);

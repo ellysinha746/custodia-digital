@@ -27,6 +27,9 @@ class UsuarioAdminOut(BaseModel):
     activo: bool
     casos_a_cargo: int
     creado_en: Optional[datetime] = None
+    institucion: Optional[str] = None
+    registro_profesional: Optional[str] = None
+    telefono: Optional[str] = None
 
 
 class UsuarioNuevo(BaseModel):
@@ -35,6 +38,9 @@ class UsuarioNuevo(BaseModel):
     password: str
     especialidad: EspecialidadEnum
     rol: RolEnum = RolEnum.perito
+    institucion: Optional[str] = None
+    registro_profesional: Optional[str] = None
+    telefono: Optional[str] = None
 
 
 class UsuarioCambios(BaseModel):
@@ -42,6 +48,9 @@ class UsuarioCambios(BaseModel):
     especialidad: Optional[EspecialidadEnum] = None
     rol: Optional[RolEnum] = None
     activo: Optional[bool] = None
+    institucion: Optional[str] = None
+    registro_profesional: Optional[str] = None
+    telefono: Optional[str] = None
 
 
 class RolOut(BaseModel):
@@ -60,6 +69,9 @@ def _a_salida(u: Usuario, casos: int) -> UsuarioAdminOut:
         activo=u.activo,
         casos_a_cargo=casos,
         creado_en=u.creado_en,
+        institucion=u.institucion,
+        registro_profesional=u.registro_profesional,
+        telefono=u.telefono,
     )
 
 
@@ -103,6 +115,9 @@ def crear_usuario(
         password_hash=hash_password(payload.password),
         especialidad=payload.especialidad,
         rol=payload.rol,
+        institucion=(payload.institucion or "").strip() or None,
+        registro_profesional=(payload.registro_profesional or "").strip() or None,
+        telefono=(payload.telefono or "").strip() or None,
     )
     db.add(nuevo)
     db.commit()
@@ -136,6 +151,10 @@ def actualizar_usuario(
         usuario.rol = payload.rol
     if payload.activo is not None:
         usuario.activo = payload.activo
+    for campo in ("institucion", "registro_profesional", "telefono"):
+        valor = getattr(payload, campo)
+        if valor is not None:
+            setattr(usuario, campo, valor.strip() or None)
 
     # Siempre debe quedar al menos un jefe de laboratorio activo.
     db.flush()  # la sesión no hace autoflush: hay que mandar los cambios antes de contar

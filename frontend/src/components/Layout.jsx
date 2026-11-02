@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import api from "../api";
 import { useToast } from "./Toast";
-import { ETIQUETAS_ROL, olvidarUsuario, puede } from "../permisos";
+import { ES_PERITO, ETIQUETAS_ROL, olvidarUsuario, puede } from "../permisos";
 
 function useBusqueda() {
   const [termino, setTermino] = useState("");
@@ -188,6 +188,9 @@ export default function Layout({ children }) {
     // Sprint 5 (historia 19.1): menú según el rol
     ...(puede(usuario, "papelera") ? [{ to: "/papelera", icono: "delete_sweep", texto: "Papelera" }] : []),
     ...(puede(usuario, "gestionar_usuarios") ? [{ to: "/usuarios", icono: "manage_accounts", texto: "Usuarios" }] : []),
+    // Sprint 5 (épica H19): padrón para jefe/fiscal y perfil para cada perito
+    ...(puede(usuario, "ver_padron") ? [{ to: "/peritos", icono: "badge", texto: "Padrón de peritos" }] : []),
+    ...(ES_PERITO(usuario) ? [{ to: "/perfil", icono: "account_box", texto: "Mi perfil" }] : []),
   ];
 
   return (

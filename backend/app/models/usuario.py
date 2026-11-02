@@ -30,3 +30,8 @@ class Usuario(Base):
     # Sprint 5 (historia 19.1): un usuario desactivado no puede iniciar sesión,
     # pero no se borra: su participación queda en la cadena de custodia.
     activo = Column(Boolean, nullable=False, default=True, server_default="true")
+
+    # Sprint 5 (historia 19.2): ficha profesional del perito (padrón de peritos).
+    institucion = Column(String, nullable=True)            # DIRCRI PNP, Medicina Legal, Laboratorio MP...
+    registro_profesional = Column(String, nullable=True)   # N° de registro / colegiatura
+    telefono = Column(String, nullable=True)
