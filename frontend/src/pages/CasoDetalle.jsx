@@ -4,6 +4,7 @@ import api from "../api";
 import Layout from "../components/Layout";
 import { useToast } from "../components/Toast";
 import FichaDispositivo, { CamposFicha } from "../components/FichaDispositivo";
+import VersionesObservadas from "../components/VersionesObservadas";
 
 const ESPECIALIDADES = {
   audio: { label: "Audio", icon: "graphic_eq" },
@@ -99,20 +100,30 @@ function FilaArchivo({ archivo, caso, onCambio }) {
     }
   };
 
-  const descargar = async () => {
+  // Sprint 4 (historia 14): se elige descargar la copia de trabajo o el original.
+  const descargar = async (version = "copia") => {
     try {
-      const { data } = await api.get(`/archivos/${archivo.id}/descargar`, { responseType: "blob" });
+      const { data } = await api.get(`/archivos/${archivo.id}/descargar`, {
+        params: { version },
+        responseType: "blob",
+      });
       const url = URL.createObjectURL(data);
       const a = document.createElement("a");
       a.href = url;
-      a.download = archivo.nombre_original;
+      a.download = version === "original" ? `ORIGINAL_${archivo.nombre_original}` : archivo.nombre_original;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
       cargarHistorial();
-    } catch {
-      notificar("No se pudo descargar el archivo.", { tipo: "error" });
+    } catch (err) {
+      let detalle = "No se pudo descargar el archivo.";
+      try {
+        detalle = JSON.parse(await err.response.data.text()).detail || detalle;
+      } catch {
+        // la respuesta no traía un mensaje legible
+      }
+      notificar(detalle, { tipo: "error" });
     }
   };
 
@@ -176,11 +187,18 @@ function FilaArchivo({ archivo, caso, onCambio }) {
                   {verificando ? "Verificando..." : "Verificar integridad"}
                 </button>
                 <button
-                  onClick={descargar}
+                  onClick={() => descargar("copia")}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface font-label-ui text-label-ui hover:bg-surface-container"
                 >
                   <span className="material-symbols-outlined text-base">download</span>
                   Descargar copia
+                </button>
+                <button
+                  onClick={() => descargar("original")}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface font-label-ui text-label-ui hover:bg-surface-container"
+                >
+                  <span className="material-symbols-outlined text-base">lock_open</span>
+                  Descargar original
                 </button>
                 {resultadoVerif && (
                   <span
@@ -256,6 +274,12 @@ function FilaArchivo({ archivo, caso, onCambio }) {
                 archivo={archivo}
                 puedeEscribir={puedeEscribir}
                 onCambio={onCambio}
+                onHistorial={cargarHistorial}
+              />
+
+              <VersionesObservadas
+                archivo={archivo}
+                puedeEscribir={puedeEscribir}
                 onHistorial={cargarHistorial}
               />
             </>

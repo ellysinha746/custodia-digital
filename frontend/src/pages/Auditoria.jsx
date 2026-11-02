@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
 import Layout from "../components/Layout";
+import ReporteAuditoria from "../components/ReporteAuditoria";
 
 const ACCIONES = {
   subida: { label: "Subida", icono: "upload_file", color: "text-secondary" },
@@ -53,11 +54,14 @@ export default function Auditoria() {
 
   return (
     <Layout>
-      <div className="mb-space-lg">
-        <h1 className="font-headline-lg text-headline-lg text-on-surface">Auditoría</h1>
-        <p className="font-body-sm text-body-sm text-on-surface-variant">
-          Todos los eventos de custodia registrados en el sistema.
-        </p>
+      <div className="mb-space-lg flex items-start justify-between gap-space-md flex-wrap">
+        <div>
+          <h1 className="font-headline-lg text-headline-lg text-on-surface">Auditoría</h1>
+          <p className="font-body-sm text-body-sm text-on-surface-variant">
+            Todos los eventos de custodia registrados en el sistema.
+          </p>
+        </div>
+        <ReporteAuditoria filtro={filtro} />
       </div>
 
       <div className="flex flex-wrap gap-space-sm mb-space-md">
@@ -105,7 +109,7 @@ export default function Auditoria() {
                     {ev.resultado && (
                       <span
                         className={`font-label-code-sm text-label-code-sm px-1.5 py-0.5 rounded ${
-                          ev.resultado === "alterado"
+                          ["alterado", "dispositivo_distinto"].includes(ev.resultado)
                             ? "bg-error/15 text-error"
                             : "bg-surface-container-high text-on-surface-variant"
                         }`}

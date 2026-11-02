@@ -5,6 +5,7 @@ import CasoDetalle from "./pages/CasoDetalle";
 import Auditoria from "./pages/Auditoria";
 import Papelera from "./pages/Papelera";
 import Alertas from "./pages/Alertas";
+import Dashboard from "./pages/Dashboard";
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
       <Route path="/auditoria" element={<Auditoria />} />
       <Route path="/papelera" element={<Papelera />} />
       <Route path="/alertas" element={<Alertas />} />
+      <Route path="/dashboard" element={<Dashboard />} />
     </Routes>
   );
 }
