@@ -24,6 +24,11 @@ class Archivo(Base):
     hash_original = Column(String, nullable=True)
     hash_actual = Column(String, nullable=True)
     metadatos = Column(JSONB, nullable=True)
+        # Sprint 4 (historia 13): ficha del dispositivo de origen (IMEI, modelo, MAC, SO).
+    # Se registra una sola vez y sirve de referencia en verificaciones posteriores.
+    ficha_dispositivo = Column(JSONB, nullable=True)
+    ficha_registrada_en = Column(DateTime(timezone=True), nullable=True)
+    
     estado_procesamiento = Column(
         Enum(EstadoProcesamientoEnum),
         nullable=False,

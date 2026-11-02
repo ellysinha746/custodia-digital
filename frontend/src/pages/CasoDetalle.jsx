@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../api";
 import Layout from "../components/Layout";
 import { useToast } from "../components/Toast";
+import FichaDispositivo, { CamposFicha } from "../components/FichaDispositivo";
 
 const ESPECIALIDADES = {
   audio: { label: "Audio", icon: "graphic_eq" },
@@ -250,6 +251,13 @@ function FilaArchivo({ archivo, caso, onCambio }) {
                   <p className="font-body-sm text-body-sm text-outline">Sin metadatos registrados.</p>
                 )}
               </div>
+
+              <FichaDispositivo
+                archivo={archivo}
+                puedeEscribir={puedeEscribir}
+                onCambio={onCambio}
+                onHistorial={cargarHistorial}
+              />
             </>
           )}
 
@@ -272,7 +280,7 @@ function FilaArchivo({ archivo, caso, onCambio }) {
                       {log.resultado && (
                         <span
                           className={`font-label-code-sm text-label-code-sm px-1.5 py-0.5 rounded ${
-                            log.resultado === "alterado"
+                            ["alterado", "dispositivo_distinto"].includes(log.resultado)
                               ? "bg-error/15 text-error"
                               : "bg-surface-container-high text-on-surface-variant"
                           }`}
@@ -311,6 +319,8 @@ export default function CasoDetalle() {
   const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState("");
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
+  const [ficha, setFicha] = useState({ imei: "", modelo: "", mac: "", sistema_operativo: "" });
+  const [mostrarFicha, setMostrarFicha] = useState(false);
   const notificadosRef = useRef(new Set());
 
   const cargarTodo = useCallback(async () => {
@@ -333,7 +343,7 @@ export default function CasoDetalle() {
     }
   }, [id, navigate]);
 
-    useEffect(() => {
+  useEffect(() => {
     // Carga inicial: el setState ocurre después del await, no hay render en cascada.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarTodo();
@@ -377,6 +387,10 @@ export default function CasoDetalle() {
 
     const formData = new FormData();
     formData.append("archivo", archivoSel);
+    // Sprint 4 (historia 13): ficha opcional del dispositivo de origen
+    Object.entries(ficha).forEach(([clave, valor]) => {
+      if (valor.trim()) formData.append(clave, valor.trim());
+    });
 
     try {
       const { data } = await api.post(`/casos/${id}/archivos`, formData, {
@@ -387,6 +401,8 @@ export default function CasoDetalle() {
       setArchivos((prev) => [data, ...prev]);
       setArchivoSel(null);
       e.target.reset();
+      setFicha({ imei: "", modelo: "", mac: "", sistema_operativo: "" });
+      setMostrarFicha(false);
       if (data.estado_procesamiento === "listo") {
         notificar(`${data.nombre_original} se subió y quedó en custodia.`, { tipo: "success" });
       }
@@ -399,6 +415,8 @@ export default function CasoDetalle() {
       setError(
         err.response?.status === 409
           ? "El caso está cerrado: no admite más archivos."
+          : typeof err.response?.data?.detail === "string"
+          ? err.response.data.detail
           : "No se pudo subir el archivo."
       );
     } finally {
@@ -522,6 +540,19 @@ export default function CasoDetalle() {
               {subiendo ? "Subiendo..." : "Subir archivo"}
             </button>
           </form>
+          <button
+            type="button"
+            onClick={() => setMostrarFicha(!mostrarFicha)}
+            className="mt-space-sm inline-flex items-center gap-1 font-label-ui text-label-ui text-primary hover:underline"
+          >
+            <span className="material-symbols-outlined text-base">{mostrarFicha ? "expand_less" : "smartphone"}</span>
+            {mostrarFicha ? "Ocultar ficha del dispositivo" : "Agregar ficha del dispositivo (opcional)"}
+          </button>
+          {mostrarFicha && (
+            <div className="mt-space-sm">
+              <CamposFicha valor={ficha} onChange={setFicha} />
+            </div>
+          )}
           {subiendo && (
             <div className="mt-space-sm">
               <div className="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">

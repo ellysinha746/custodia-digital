@@ -1,9 +1,10 @@
 import os
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, status
+from datetime import datetime, timezone
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from uuid import UUID
-from typing import List
+from typing import List, Optional
 
 from app.db.session import get_db, SessionLocal
 from app.schemas.archivo import (
@@ -21,7 +22,7 @@ from app.core.security import get_current_user
 from app.services.storage_service import guardar_archivo
 from app.services.hashing_service import calcular_sha256
 from app.services.integridad_service import revisar_archivo, notificar_alerta
-
+from app.services.ficha_service import normalizar_ficha
 router = APIRouter(tags=["archivos"])
 
 
@@ -91,11 +92,24 @@ def subir_archivo(
     caso_id: UUID,
     background_tasks: BackgroundTasks,
     archivo: UploadFile = File(...),
+    imei: Optional[str] = Form(None),
+    modelo: Optional[str] = Form(None),
+    mac: Optional[str] = Form(None),
+    sistema_operativo: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_user),
 ):
     caso = _obtener_caso_editable(db, caso_id, usuario_actual)
 
+    # Sprint 4 (historia 13): ficha opcional del dispositivo. Se valida ANTES
+    # de guardar nada en disco, para no dejar archivos huérfanos si es inválida.
+    ficha = normalizar_ficha(
+        {"imei": imei, "modelo": modelo, "mac": mac, "sistema_operativo": sistema_operativo}
+    )
+    datos_ficha = {
+        "ficha_dispositivo": ficha or None,
+        "ficha_registrada_en": datetime.now(timezone.utc) if ficha else None,
+    }
     ruta_original, ruta_copia = guardar_archivo(
         str(caso_id), archivo.filename, archivo.file
     )
@@ -112,6 +126,7 @@ def subir_archivo(
             hash_actual=None,
             estado_procesamiento=EstadoProcesamientoEnum.procesando,
             metadatos={"content_type": archivo.content_type},
+            **datos_ficha,
         )
         db.add(nuevo)
         db.commit()
@@ -129,6 +144,7 @@ def subir_archivo(
         hash_actual=hash_copia,
         estado_procesamiento=EstadoProcesamientoEnum.listo,
         metadatos={"content_type": archivo.content_type},
+        **datos_ficha,
     )
     db.add(nuevo)
     db.flush()
