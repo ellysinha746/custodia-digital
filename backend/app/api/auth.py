@@ -33,6 +33,8 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     usuario = db.query(Usuario).filter(Usuario.email == payload.email).first()
     if not usuario or not verify_password(payload.password, usuario.password_hash):
         raise HTTPException(status_code=401, detail="Email o contraseña incorrectos.")
+    if not usuario.activo:  # Sprint 5 (historia 19.1)
+        raise HTTPException(status_code=403, detail="Tu usuario está desactivado. Contacta al jefe de laboratorio.")
 
     return TokenResponse(
         access_token=crear_access_token(str(usuario.id)),
@@ -50,8 +52,8 @@ def refresh(payload: RefreshRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Token inválido o expirado.")
 
     usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
-    if not usuario:
-        raise HTTPException(status_code=401, detail="Usuario no encontrado.")
+    if not usuario or not usuario.activo:
+        raise HTTPException(status_code=401, detail="Usuario no encontrado o desactivado.")
 
     return TokenResponse(
         access_token=crear_access_token(str(usuario.id)),
@@ -65,6 +67,8 @@ def login_swagger(
     usuario = db.query(Usuario).filter(Usuario.email == form.username).first()
     if not usuario or not verify_password(form.password, usuario.password_hash):
         raise HTTPException(status_code=401, detail="Email o contraseña incorrectos.")
+    if not usuario.activo:  # Sprint 5 (historia 19.1)
+        raise HTTPException(status_code=403, detail="Tu usuario está desactivado. Contacta al jefe de laboratorio.")
 
     return TokenResponse(
         access_token=crear_access_token(str(usuario.id)),

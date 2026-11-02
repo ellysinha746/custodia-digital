@@ -6,8 +6,8 @@ from app.schemas.busqueda import BusquedaOut, ArchivoBusquedaOut
 from app.schemas.caso import CasoOut
 from app.models.caso import Caso
 from app.models.archivo import Archivo
-from app.models.usuario import RolEnum
 from app.core.security import get_current_user
+from app.core.permisos import condicion_casos_visibles
 
 router = APIRouter(tags=["busqueda"])
 
@@ -26,8 +26,7 @@ def buscar(
     casos_query = db.query(Caso).filter(
         Caso.eliminado_en.is_(None), Caso.numero_caso.ilike(patron)
     )
-    if usuario_actual.rol != RolEnum.admin:
-        casos_query = casos_query.filter(Caso.usuario_id == usuario_actual.id)
+    casos_query = casos_query.filter(condicion_casos_visibles(usuario_actual))
     casos = casos_query.order_by(Caso.creado_en.desc()).limit(10).all()
 
     archivos_query = (
@@ -35,8 +34,7 @@ def buscar(
         .join(Caso, Archivo.caso_id == Caso.id)
         .filter(Caso.eliminado_en.is_(None), Archivo.nombre_original.ilike(patron))
     )
-    if usuario_actual.rol != RolEnum.admin:
-        archivos_query = archivos_query.filter(Caso.usuario_id == usuario_actual.id)
+    archivos_query = archivos_query.filter(condicion_casos_visibles(usuario_actual))
     filas = archivos_query.order_by(Archivo.subido_en.desc()).limit(10).all()
 
     archivos = [

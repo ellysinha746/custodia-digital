@@ -14,6 +14,7 @@ class UsuarioOut(BaseModel):
     email: EmailStr
     especialidad: EspecialidadEnum
     rol: RolEnum
+    activo: bool = True
 
     class Config:
         from_attributes = True

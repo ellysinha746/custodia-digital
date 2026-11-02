@@ -6,6 +6,7 @@ import Auditoria from "./pages/Auditoria";
 import Papelera from "./pages/Papelera";
 import Alertas from "./pages/Alertas";
 import Dashboard from "./pages/Dashboard";
+import Usuarios from "./pages/Usuarios";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
       <Route path="/papelera" element={<Papelera />} />
       <Route path="/alertas" element={<Alertas />} />
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/usuarios" element={<Usuarios />} />
     </Routes>
   );
 }

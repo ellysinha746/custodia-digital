@@ -11,10 +11,11 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.core.security import get_current_user
+from app.core.permisos import condicion_casos_visibles
 from app.models.log_custodia import LogCustodia, AccionEnum
 from app.models.archivo import Archivo
 from app.models.caso import Caso
-from app.models.usuario import Usuario, RolEnum
+from app.models.usuario import Usuario
 from app.models.reporte_auditoria import ReporteAuditoria
 from app.services.reporte_service import (
     hash_contenido,
@@ -47,10 +48,10 @@ def _eventos_visibles(db: Session, usuario_actual, accion: Optional[AccionEnum])
         .join(Caso, Archivo.caso_id == Caso.id)
         .join(Usuario, LogCustodia.usuario_id == Usuario.id)
     )
-    if usuario_actual.rol != RolEnum.admin:
-        query = query.filter(
-            or_(Caso.usuario_id == usuario_actual.id, LogCustodia.usuario_id == usuario_actual.id)
-        )
+    # Sprint 5: cada rol ve los eventos de los casos que puede ver, más los propios.
+    query = query.filter(
+        or_(condicion_casos_visibles(usuario_actual), LogCustodia.usuario_id == usuario_actual.id)
+    )
     if accion:
         query = query.filter(LogCustodia.accion == accion)
     filas = query.order_by(LogCustodia.fecha.desc()).limit(MAX_EVENTOS).all()

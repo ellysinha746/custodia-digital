@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import api from "../api";
 import { useToast } from "./Toast";
+import { ETIQUETAS_ROL, olvidarUsuario, puede } from "../permisos";
 
 function useBusqueda() {
   const [termino, setTermino] = useState("");
@@ -170,6 +171,7 @@ export default function Layout({ children }) {
 
   const cerrarSesion = () => {
     localStorage.clear();
+    olvidarUsuario();
     navigate("/");
   };
 
@@ -179,11 +181,13 @@ export default function Layout({ children }) {
 
   const navItems = [
     // Sprint 4 (historia 18): el dashboard solo aparece para el administrador.
-    ...(usuario?.rol === "admin" ? [{ to: "/dashboard", icono: "monitoring", texto: "Dashboard" }] : []),
+    ...(puede(usuario, "ver_dashboard") ? [{ to: "/dashboard", icono: "monitoring", texto: "Dashboard" }] : []),
     { to: "/casos", icono: "folder_special", texto: "Casos" },
     { to: "/auditoria", icono: "history_edu", texto: "Auditoría" },
         { to: "/alertas", icono: "gpp_maybe", texto: "Alertas", contador: pendientes },
-    { to: "/papelera", icono: "delete_sweep", texto: "Papelera" },
+    // Sprint 5 (historia 19.1): menú según el rol
+    ...(puede(usuario, "papelera") ? [{ to: "/papelera", icono: "delete_sweep", texto: "Papelera" }] : []),
+    ...(puede(usuario, "gestionar_usuarios") ? [{ to: "/usuarios", icono: "manage_accounts", texto: "Usuarios" }] : []),
   ];
 
   return (
@@ -214,7 +218,7 @@ export default function Layout({ children }) {
                 {usuario ? usuario.nombre : "Perito"}
               </span>
               <span className="font-label-code-sm text-label-code-sm text-on-surface-variant">
-                {usuario ? `Perito en ${usuario.especialidad}` : "Cargando..."}
+                {usuario ? `${ETIQUETAS_ROL[usuario.rol] || usuario.rol} · ${usuario.especialidad}` : "Cargando..."}
               </span>
             </div>
           </div>

@@ -5,6 +5,7 @@ import Layout from "../components/Layout";
 import { useToast } from "../components/Toast";
 import FichaDispositivo, { CamposFicha } from "../components/FichaDispositivo";
 import VersionesObservadas from "../components/VersionesObservadas";
+import { puede, useUsuario } from "../permisos";
 
 const ESPECIALIDADES = {
   audio: { label: "Audio", icon: "graphic_eq" },
@@ -62,6 +63,7 @@ function FilaArchivo({ archivo, caso, onCambio }) {
   const [metaForm, setMetaForm] = useState({});
   const [guardandoMeta, setGuardandoMeta] = useState(false);
   const { notificar } = useToast();
+  const usuario = useUsuario(); // Sprint 5: acciones según el rol
 
   const campos = CAMPOS_METADATOS[caso.especialidad] || [];
   const puedeEscribir = caso.estado !== "cerrado";
@@ -178,14 +180,16 @@ function FilaArchivo({ archivo, caso, onCambio }) {
           ) : (
             <>
               <div className="flex flex-wrap items-center gap-space-sm">
-                <button
-                  onClick={verificar}
-                  disabled={verificando}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface font-label-ui text-label-ui hover:bg-surface-container disabled:opacity-60"
-                >
-                  <span className="material-symbols-outlined text-base">enhanced_encryption</span>
-                  {verificando ? "Verificando..." : "Verificar integridad"}
-                </button>
+                {puede(usuario, "verificar_integridad") && (
+                  <button
+                    onClick={verificar}
+                    disabled={verificando}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface font-label-ui text-label-ui hover:bg-surface-container disabled:opacity-60"
+                  >
+                    <span className="material-symbols-outlined text-base">enhanced_encryption</span>
+                    {verificando ? "Verificando..." : "Verificar integridad"}
+                  </button>
+                )}
                 <button
                   onClick={() => descargar("copia")}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface font-label-ui text-label-ui hover:bg-surface-container"
@@ -193,13 +197,15 @@ function FilaArchivo({ archivo, caso, onCambio }) {
                   <span className="material-symbols-outlined text-base">download</span>
                   Descargar copia
                 </button>
-                <button
-                  onClick={() => descargar("original")}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface font-label-ui text-label-ui hover:bg-surface-container"
-                >
-                  <span className="material-symbols-outlined text-base">lock_open</span>
-                  Descargar original
-                </button>
+                {puede(usuario, "descargar_original") && (
+                  <button
+                    onClick={() => descargar("original")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface font-label-ui text-label-ui hover:bg-surface-container"
+                  >
+                    <span className="material-symbols-outlined text-base">lock_open</span>
+                    Descargar original
+                  </button>
+                )}
                 {resultadoVerif && (
                   <span
                     className={`font-label-ui text-label-ui uppercase tracking-wider ${
@@ -216,7 +222,7 @@ function FilaArchivo({ archivo, caso, onCambio }) {
                   <span className="font-label-ui text-label-ui text-outline uppercase tracking-wider">
                     Metadatos ({ESPECIALIDADES[caso.especialidad].label})
                   </span>
-                  {puedeEscribir && !editandoMeta && (
+                  {puedeEscribir && puede(usuario, "editar_metadatos") && !editandoMeta && (
                     <button
                       onClick={abrirEdicionMeta}
                       className="font-label-ui text-label-ui text-primary hover:underline"
@@ -272,14 +278,15 @@ function FilaArchivo({ archivo, caso, onCambio }) {
 
               <FichaDispositivo
                 archivo={archivo}
-                puedeEscribir={puedeEscribir}
+                puedeEscribir={puedeEscribir && puede(usuario, "registrar_ficha")}
+                puedeVerificar={puede(usuario, "verificar_dispositivo")}
                 onCambio={onCambio}
                 onHistorial={cargarHistorial}
               />
 
               <VersionesObservadas
                 archivo={archivo}
-                puedeEscribir={puedeEscribir}
+                puedeEscribir={puedeEscribir && puede(usuario, "subir_observada")}
                 onHistorial={cargarHistorial}
               />
             </>
@@ -334,6 +341,7 @@ export default function CasoDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { notificar } = useToast();
+  const usuario = useUsuario(); // Sprint 5: acciones según el rol
 
   const [caso, setCaso] = useState(null);
   const [archivos, setArchivos] = useState([]);
@@ -515,7 +523,7 @@ export default function CasoDetalle() {
         </div>
 
         <div className="flex gap-space-sm">
-          {est.siguiente && (
+          {est.siguiente && puede(usuario, "cambiar_estado_caso") && (
             <button
               onClick={avanzarEstado}
               disabled={cambiandoEstado}
@@ -527,13 +535,15 @@ export default function CasoDetalle() {
               {est.siguiente === "cerrado" ? "Cerrar caso" : "Pasar a en proceso"}
             </button>
           )}
-          <button
-            onClick={eliminarCaso}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-error hover:bg-error/10 font-label-ui text-label-ui"
-          >
-            <span className="material-symbols-outlined text-base">delete</span>
-            Eliminar
-          </button>
+          {puede(usuario, "eliminar_caso") && (
+            <button
+              onClick={eliminarCaso}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-error hover:bg-error/10 font-label-ui text-label-ui"
+            >
+              <span className="material-symbols-outlined text-base">delete</span>
+              Eliminar
+            </button>
+          )}
         </div>
       </div>
 
@@ -546,7 +556,7 @@ export default function CasoDetalle() {
         </div>
       )}
 
-      {!cerrado && (
+      {!cerrado && puede(usuario, "subir_evidencia") && (
         <div className="bg-surface-container-low rounded-xl p-space-md mb-space-md">
           <h2 className="font-headline-sm text-headline-sm text-on-surface mb-space-sm">Subir evidencia</h2>
           <form onSubmit={subir} className="flex flex-col sm:flex-row gap-space-sm sm:items-center">

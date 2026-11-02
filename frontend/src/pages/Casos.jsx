@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api";
 import Layout from "../components/Layout";
 import { useToast } from "../components/Toast";
+import { puede, useUsuario } from "../permisos";
 
 const ESPECIALIDADES = {
   audio: { label: "Audio", icon: "graphic_eq" },
@@ -43,6 +44,7 @@ export default function Casos() {
   const [especialidad, setEspecialidad] = useState("informatica");
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const usuario = useUsuario(); // Sprint 5: botones según el rol
   const navigate = useNavigate();
   const { notificar } = useToast();
 
@@ -130,6 +132,7 @@ export default function Casos() {
             Expedientes con evidencia digital bajo cadena de custodia.
           </p>
         </div>
+        {puede(usuario, "crear_caso") && (
         <button
           onClick={abrirModal}
           className="inline-flex items-center gap-2 px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-headline-sm text-headline-sm hover:bg-primary-container active:scale-[0.99] transition-all shadow-lg shadow-primary/20"
@@ -137,6 +140,7 @@ export default function Casos() {
           <span className="material-symbols-outlined text-xl">add</span>
           Nuevo caso
         </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-gutter mb-space-lg">
@@ -221,13 +225,15 @@ export default function Casos() {
                     {new Date(c.creado_en).toLocaleString("es-PE", { dateStyle: "medium", timeStyle: "short" })}
                   </td>
                   <td className="px-space-md py-4 text-right">
-                    <button
-                      onClick={(e) => eliminarCaso(e, c)}
-                      title="Eliminar caso"
-                      className="text-outline hover:text-error transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-xl">delete</span>
-                    </button>
+                    {puede(usuario, "eliminar_caso") && (
+                      <button
+                        onClick={(e) => eliminarCaso(e, c)}
+                        title="Eliminar caso"
+                        className="text-outline hover:text-error transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-xl">delete</span>
+                      </button>
+                    )}
                   </td>
                   <td className="px-space-md py-4 text-right text-primary">
                     <span className="material-symbols-outlined">arrow_forward</span>

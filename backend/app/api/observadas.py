@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.core.security import get_current_user
+from app.core.permisos import exigir
 from app.api.archivos import _obtener_archivo, _obtener_caso_editable
 from app.models.version_observada import VersionObservada
 from app.models.log_custodia import LogCustodia, AccionEnum
@@ -57,6 +58,7 @@ def subir_version_observada(
 ):
     """Historia 14: otro perito sube su versión del archivo con observaciones.
     Se guarda en una carpeta propia: el original y la copia NO se tocan."""
+    exigir(usuario_actual, "subir_observada")
     evidencia = _obtener_archivo(db, archivo_id, usuario_actual)
     _obtener_caso_editable(db, evidencia.caso_id, usuario_actual)
     if not observaciones.strip():

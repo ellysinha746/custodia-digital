@@ -8,8 +8,9 @@ from app.schemas.auditoria import AuditoriaItemOut
 from app.models.log_custodia import LogCustodia, AccionEnum
 from app.models.archivo import Archivo
 from app.models.caso import Caso
-from app.models.usuario import Usuario, RolEnum
+from app.models.usuario import Usuario
 from app.core.security import get_current_user
+from app.core.permisos import condicion_casos_visibles
 
 router = APIRouter(prefix="/auditoria", tags=["auditoria"])
 
@@ -30,10 +31,10 @@ def panel_auditoria(
         .join(Usuario, LogCustodia.usuario_id == Usuario.id)
     )
 
-    if usuario_actual.rol != RolEnum.admin:
-        query = query.filter(
-            or_(Caso.usuario_id == usuario_actual.id, LogCustodia.usuario_id == usuario_actual.id)
-        )
+    # Sprint 5: cada rol ve los eventos de los casos que puede ver, más los propios.
+    query = query.filter(
+        or_(condicion_casos_visibles(usuario_actual), LogCustodia.usuario_id == usuario_actual.id)
+    )
     if accion:
         query = query.filter(LogCustodia.accion == accion)
 

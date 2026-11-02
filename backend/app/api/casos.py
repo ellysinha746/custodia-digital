@@ -8,19 +8,17 @@ from uuid import UUID
 from app.db.session import get_db
 from app.schemas.caso import CasoCreate, CasoOut, CasoEstadoUpdate, CasoPapeleraOut
 from app.models.caso import Caso, EstadoCasoEnum
-from app.models.usuario import EspecialidadEnum, RolEnum
+from app.models.usuario import EspecialidadEnum
 from app.core.config import settings
 from typing import List, Optional
 from app.core.security import get_current_user
+from app.core.permisos import condicion_casos_visibles, puede_ver_caso, exigir
 
 router = APIRouter(prefix="/casos", tags=["casos"])
 
 
 def _query_visible(db: Session, usuario_actual):
-    query = db.query(Caso).filter(Caso.eliminado_en.is_(None))
-    if usuario_actual.rol != RolEnum.admin:
-        query = query.filter(Caso.usuario_id == usuario_actual.id)
-    return query
+    return db.query(Caso).filter(Caso.eliminado_en.is_(None), condicion_casos_visibles(usuario_actual))
 
 
 def _obtener_caso_propio(db: Session, caso_id: UUID, usuario_actual, incluir_eliminados=False) -> Caso:
@@ -30,7 +28,7 @@ def _obtener_caso_propio(db: Session, caso_id: UUID, usuario_actual, incluir_eli
     caso = query.first()
     if not caso:
         raise HTTPException(status_code=404, detail="Caso no encontrado.")
-    if usuario_actual.rol != RolEnum.admin and caso.usuario_id != usuario_actual.id:
+    if not puede_ver_caso(usuario_actual, caso):
         raise HTTPException(status_code=404, detail="Caso no encontrado.")
     return caso
 
@@ -41,6 +39,7 @@ def crear_caso(
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_user),
 ):
+    exigir(usuario_actual, "crear_caso")
     existe = db.query(Caso).filter(Caso.numero_caso == payload.numero_caso).first()
     if existe:
         raise HTTPException(status_code=409, detail="Ya existe un caso con ese número.")
@@ -85,18 +84,19 @@ def listar_papelera(
 ):
     """Casos eliminados hace menos de DIAS_PAPELERA días. Los más viejos
     se purgan en forma definitiva antes de armar la lista (historia Sprint 3)."""
+    exigir(usuario_actual, "papelera")
     limite = datetime.now(timezone.utc) - timedelta(days=settings.DIAS_PAPELERA)
 
-    vencidos = db.query(Caso).filter(Caso.eliminado_en.isnot(None), Caso.eliminado_en < limite)
-    if usuario_actual.rol != RolEnum.admin:
-        vencidos = vencidos.filter(Caso.usuario_id == usuario_actual.id)
+    vencidos = db.query(Caso).filter(
+        Caso.eliminado_en.isnot(None), Caso.eliminado_en < limite, condicion_casos_visibles(usuario_actual)
+    )
     for caso in vencidos.all():
         db.delete(caso)
     db.commit()
 
-    query = db.query(Caso).filter(Caso.eliminado_en.isnot(None), Caso.eliminado_en >= limite)
-    if usuario_actual.rol != RolEnum.admin:
-        query = query.filter(Caso.usuario_id == usuario_actual.id)
+    query = db.query(Caso).filter(
+        Caso.eliminado_en.isnot(None), Caso.eliminado_en >= limite, condicion_casos_visibles(usuario_actual)
+    )
 
     resultado = []
     for caso in query.order_by(Caso.eliminado_en.desc()).all():
@@ -133,6 +133,7 @@ def actualizar_estado_caso(
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_user),
 ):
+    exigir(usuario_actual, "cambiar_estado_caso")
     caso = _obtener_caso_propio(db, caso_id, usuario_actual)
     if caso.estado == EstadoCasoEnum.cerrado:
         raise HTTPException(
@@ -158,6 +159,7 @@ def eliminar_caso(
 ):
     """Borrado suave: el caso pasa a la papelera y se puede restaurar hasta
     DIAS_PAPELERA días después (historia Sprint 3)."""
+    exigir(usuario_actual, "eliminar_caso")
     caso = _obtener_caso_propio(db, caso_id, usuario_actual)
     caso.eliminado_en = datetime.now(timezone.utc)
     db.commit()
@@ -169,6 +171,7 @@ def restaurar_caso(
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_user),
 ):
+    exigir(usuario_actual, "papelera")
     caso = _obtener_caso_propio(db, caso_id, usuario_actual, incluir_eliminados=True)
     if caso.eliminado_en is None:
         raise HTTPException(status_code=400, detail="El caso no está en la papelera.")

@@ -16,9 +16,9 @@ from app.schemas.archivo import (
 from app.models.caso import Caso, EstadoCasoEnum
 from app.models.archivo import Archivo, EstadoProcesamientoEnum
 from app.models.log_custodia import LogCustodia, AccionEnum
-from app.models.usuario import RolEnum
 from app.core.config import settings
 from app.core.security import get_current_user
+from app.core.permisos import puede_ver_caso, exigir
 from app.services.storage_service import guardar_archivo
 from app.services.hashing_service import calcular_sha256
 from app.services.integridad_service import revisar_archivo, notificar_alerta
@@ -32,7 +32,7 @@ def _obtener_caso(db: Session, caso_id: UUID, usuario_actual) -> Caso:
     caso = db.query(Caso).filter(Caso.id == caso_id, Caso.eliminado_en.is_(None)).first()
     if not caso:
         raise HTTPException(status_code=404, detail="Caso no encontrado.")
-    if usuario_actual.rol != RolEnum.admin and caso.usuario_id != usuario_actual.id:
+    if not puede_ver_caso(usuario_actual, caso):
         raise HTTPException(status_code=404, detail="Caso no encontrado.")
     return caso
 
@@ -99,6 +99,7 @@ def subir_archivo(
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_user),
 ):
+    exigir(usuario_actual, "subir_evidencia")
     caso = _obtener_caso_editable(db, caso_id, usuario_actual)
 
     # Sprint 4 (historia 13): ficha opcional del dispositivo. Se valida ANTES
@@ -224,6 +225,8 @@ def descargar_archivo(
     """Sprint 4 (historia 14): el perito elige descargar la copia de trabajo
     o el original. El original solo se entrega si su hash sigue intacto."""
     archivo = _obtener_archivo(db, archivo_id, usuario_actual)
+    if version == "original":
+        exigir(usuario_actual, "descargar_original")
     if archivo.estado_procesamiento != EstadoProcesamientoEnum.listo:
         raise HTTPException(status_code=409, detail="El archivo aún se está procesando.")
 
@@ -258,6 +261,7 @@ def verificar_integridad(
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_user),
 ):
+    exigir(usuario_actual, "verificar_integridad")
     archivo = _obtener_archivo(db, archivo_id, usuario_actual)
     if archivo.estado_procesamiento != EstadoProcesamientoEnum.listo or not archivo.hash_original:
         raise HTTPException(
@@ -304,6 +308,7 @@ def actualizar_metadatos(
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_user),
 ):
+    exigir(usuario_actual, "editar_metadatos")
     archivo = _obtener_archivo(db, archivo_id, usuario_actual)
     _obtener_caso_editable(db, archivo.caso_id, usuario_actual)
 

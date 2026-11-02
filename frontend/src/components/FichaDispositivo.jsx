@@ -49,7 +49,7 @@ function limpiar(ficha) {
   return salida;
 }
 
-export default function FichaDispositivo({ archivo, puedeEscribir, onCambio, onHistorial }) {
+export default function FichaDispositivo({ archivo, puedeEscribir, puedeVerificar = true, onCambio, onHistorial }) {
   const [modo, setModo] = useState(null); // null | "registrar" | "verificar"
   const [form, setForm] = useState(VACIA);
   const [enviando, setEnviando] = useState(false);
@@ -132,10 +132,12 @@ export default function FichaDispositivo({ archivo, puedeEscribir, onCambio, onH
         <div className="flex gap-1.5 flex-wrap">
           {ficha ? (
             <>
-              <button onClick={() => abrir(modo === "verificar" ? null : "verificar")} className={botonChico}>
-                <span className="material-symbols-outlined text-base">compare_arrows</span>
-                Verificar dispositivo
-              </button>
+              {puedeVerificar && (
+                <button onClick={() => abrir(modo === "verificar" ? null : "verificar")} className={botonChico}>
+                  <span className="material-symbols-outlined text-base">compare_arrows</span>
+                  Verificar dispositivo
+                </button>
+              )}
               <button onClick={() => exportar("json")} className={botonChico}>
                 <span className="material-symbols-outlined text-base">data_object</span>
                 JSON

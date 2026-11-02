@@ -1,18 +1,18 @@
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.core.security import get_current_user
+from app.core.permisos import exigir
 from app.models.alerta import Alerta
 from app.models.archivo import Archivo
 from app.models.caso import Caso, EstadoCasoEnum
 from app.models.log_custodia import LogCustodia, AccionEnum
-from app.models.usuario import RolEnum
 
 router = APIRouter(prefix="/metricas", tags=["dashboard"])
 
@@ -50,8 +50,7 @@ def obtener_metricas(
     usuario_actual=Depends(get_current_user),
 ):
     """Historia 18: métricas generales del sistema (solo administrador)."""
-    if usuario_actual.rol != RolEnum.admin:
-        raise HTTPException(status_code=403, detail="Solo un administrador puede ver el dashboard.")
+    exigir(usuario_actual, "ver_dashboard")
 
     vivos = db.query(Caso).filter(Caso.eliminado_en.is_(None))
     por_estado = dict(
