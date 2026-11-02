@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, B
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from uuid import UUID
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from app.db.session import get_db, SessionLocal
 from app.schemas.archivo import (
@@ -217,26 +217,38 @@ def historial_archivo(
 @router.get("/archivos/{archivo_id}/descargar")
 def descargar_archivo(
     archivo_id: UUID,
+    version: Literal["copia", "original"] = "copia",
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_user),
 ):
+    """Sprint 4 (historia 14): el perito elige descargar la copia de trabajo
+    o el original. El original solo se entrega si su hash sigue intacto."""
     archivo = _obtener_archivo(db, archivo_id, usuario_actual)
     if archivo.estado_procesamiento != EstadoProcesamientoEnum.listo:
         raise HTTPException(status_code=409, detail="El archivo aún se está procesando.")
-    if not os.path.exists(archivo.ruta_copia_trabajo):
+
+    ruta = archivo.ruta_original if version == "original" else archivo.ruta_copia_trabajo
+    if not os.path.exists(ruta):
         raise HTTPException(status_code=404, detail="El archivo ya no está en el almacenamiento.")
+    if version == "original" and calcular_sha256(ruta) != archivo.hash_original:
+        raise HTTPException(
+            status_code=409,
+            detail="El original no coincide con su hash registrado: no se entrega. Revisa las alertas de integridad.",
+        )
 
     db.add(
         LogCustodia(
             archivo_id=archivo.id,
             usuario_id=usuario_actual.id,
             accion=AccionEnum.descarga,
+            resultado=version,
         )
     )
     db.commit()
 
-    # Siempre se entrega la copia de trabajo: el original nunca se expone ni se toca.
-    return FileResponse(archivo.ruta_copia_trabajo, filename=archivo.nombre_original)
+    nombre = archivo.nombre_original if version == "copia" else f"ORIGINAL_{archivo.nombre_original}"
+    # El original se lee pero nunca se modifica: FileResponse solo lo entrega.
+    return FileResponse(ruta, filename=nombre)
 
 
 @router.post("/archivos/{archivo_id}/verificar", response_model=VerificacionOut)

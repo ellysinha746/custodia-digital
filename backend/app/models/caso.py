@@ -21,6 +21,8 @@ class Caso(Base):
     usuario_id = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False)
     creado_en = Column(DateTime(timezone=True), server_default=func.now())
     eliminado_en = Column(DateTime(timezone=True), nullable=True, index=True)
+        # Sprint 4 (historia 18): se llena al cerrar el caso, para medir el tiempo de cierre.
+    cerrado_en = Column(DateTime(timezone=True), nullable=True)
 
     usuario = relationship("Usuario")
     archivos = relationship("Archivo", back_populates="caso")

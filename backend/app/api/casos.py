@@ -143,6 +143,8 @@ def actualizar_estado_caso(
         raise HTTPException(status_code=400, detail="El caso ya tiene ese estado.")
 
     caso.estado = payload.estado
+    if payload.estado == EstadoCasoEnum.cerrado:
+        caso.cerrado_en = datetime.now(timezone.utc)  # Sprint 4 (historia 18)
     db.commit()
     db.refresh(caso)
     return caso
