@@ -178,6 +178,8 @@ export default function Layout({ children }) {
     : "··";
 
   const navItems = [
+    // Sprint 4 (historia 18): el dashboard solo aparece para el administrador.
+    ...(usuario?.rol === "admin" ? [{ to: "/dashboard", icono: "monitoring", texto: "Dashboard" }] : []),
     { to: "/casos", icono: "folder_special", texto: "Casos" },
     { to: "/auditoria", icono: "history_edu", texto: "Auditoría" },
         { to: "/alertas", icono: "gpp_maybe", texto: "Alertas", contador: pendientes },
