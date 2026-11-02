@@ -13,7 +13,7 @@ class UsuarioOut(BaseModel):
     id: UUID
     nombre: str
     email: EmailStr
-    especialidad: EspecialidadEnum
+    especialidad: Optional[EspecialidadEnum] = None
     rol: RolEnum
     activo: bool = True
     institucion: Optional[str] = None

@@ -1,7 +1,7 @@
 import uuid
 import enum
 from sqlalchemy import Column, String, Enum, ForeignKey, DateTime, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 from app.models.usuario import EspecialidadEnum
@@ -16,7 +16,9 @@ class Caso(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     numero_caso = Column(String, nullable=False, unique=True)
-    especialidad = Column(Enum(EspecialidadEnum), nullable=False)
+    especialidad = Column(Enum(EspecialidadEnum), nullable=False)  # la principal (la primera de la lista)
+    # Sprint 5: un caso puede abarcar varias especialidades, p. ej. ["telefonia", "audio", "video"]
+    especialidades = Column(JSONB, nullable=False, default=list, server_default="[]")
     estado = Column(Enum(EstadoCasoEnum), nullable=False, default=EstadoCasoEnum.abierto, index=True)
     usuario_id = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False)
     creado_en = Column(DateTime(timezone=True), server_default=func.now())

@@ -180,7 +180,7 @@ def exportar_ficha(
 
     documento = {
         "tipo_documento": "Ficha de metadatos del dispositivo de origen",
-        "caso": {"numero": caso.numero_caso, "especialidad": caso.especialidad.value},
+        "caso": {"numero": caso.numero_caso, "especialidades": caso.especialidades or [caso.especialidad.value]},
         "archivo": {
             "id": str(archivo.id),
             "nombre": archivo.nombre_original,
@@ -220,7 +220,7 @@ def exportar_ficha(
         filas = [
             ("tipo_documento", documento["tipo_documento"]),
             ("caso_numero", caso.numero_caso),
-            ("caso_especialidad", caso.especialidad.value),
+            ("caso_especialidades", ", ".join(caso.especialidades or [caso.especialidad.value])),
             ("archivo_id", str(archivo.id)),
             ("archivo_nombre", archivo.nombre_original),
             ("hash_sha256_original", archivo.hash_original),

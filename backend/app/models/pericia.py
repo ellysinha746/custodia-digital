@@ -27,6 +27,7 @@ class Pericia(Base):
     caso_id = Column(UUID(as_uuid=True), ForeignKey("casos.id"), nullable=False, index=True)
     codigo = Column(String, nullable=False, unique=True)  # PER-2026-0001
     estado = Column(String, nullable=False, default="designada", index=True)
+    especialidad = Column(String, nullable=True)  # en qué especialidad del caso se hace la pericia
 
     # Historia 19.3: designación por el fiscal
     disposicion_fiscal = Column(String, nullable=False)  # N° de disposición / oficio

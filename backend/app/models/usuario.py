@@ -23,7 +23,7 @@ class Usuario(Base):
     nombre = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
-    especialidad = Column(Enum(EspecialidadEnum), nullable=False)
+    especialidad = Column(Enum(EspecialidadEnum), nullable=True)  # Sprint 5: solo los peritos tienen especialidad
     rol = Column(Enum(RolEnum), nullable=False, default=RolEnum.perito)
     membrete_logo_url = Column(String, nullable=True)
     creado_en = Column(DateTime(timezone=True), server_default=func.now())

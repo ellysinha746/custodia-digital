@@ -21,7 +21,7 @@ class UsuarioAdminOut(BaseModel):
     id: UUID
     nombre: str
     email: str
-    especialidad: EspecialidadEnum
+    especialidad: Optional[EspecialidadEnum] = None
     rol: RolEnum
     rol_etiqueta: str
     activo: bool
@@ -36,7 +36,7 @@ class UsuarioNuevo(BaseModel):
     nombre: str
     email: EmailStr
     password: str
-    especialidad: EspecialidadEnum
+    especialidad: Optional[EspecialidadEnum] = None  # solo para peritos
     rol: RolEnum = RolEnum.perito
     institucion: Optional[str] = None
     registro_profesional: Optional[str] = None
@@ -84,6 +84,18 @@ def _casos_por_usuario(db: Session) -> dict:
     )
 
 
+ROLES_CON_ESPECIALIDAD = (RolEnum.perito, RolEnum.perito_parte)
+
+
+def _especialidad_segun_rol(rol: RolEnum, especialidad):
+    """Sprint 5: solo los peritos tienen especialidad; el fiscal y el jefe no."""
+    if rol in ROLES_CON_ESPECIALIDAD:
+        if not especialidad:
+            raise HTTPException(status_code=400, detail="Indica la especialidad del perito.")
+        return especialidad
+    return None
+
+
 @router.get("/roles", response_model=List[RolOut])
 def listar_roles(usuario_actual=Depends(requiere("gestionar_usuarios"))):
     return [RolOut(valor=r, etiqueta=e) for r, e in ETIQUETAS_ROL.items()]
@@ -109,11 +121,12 @@ def crear_usuario(
         raise HTTPException(status_code=409, detail="El email ya está registrado.")
     if len(payload.password) < 8:
         raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres.")
+    especialidad = _especialidad_segun_rol(payload.rol, payload.especialidad)
     nuevo = Usuario(
         nombre=payload.nombre.strip(),
         email=payload.email,
         password_hash=hash_password(payload.password),
-        especialidad=payload.especialidad,
+        especialidad=especialidad,
         rol=payload.rol,
         institucion=(payload.institucion or "").strip() or None,
         registro_profesional=(payload.registro_profesional or "").strip() or None,
@@ -149,6 +162,8 @@ def actualizar_usuario(
         usuario.especialidad = payload.especialidad
     if payload.rol is not None:
         usuario.rol = payload.rol
+    # Un perito siempre tiene especialidad; el fiscal y el jefe, ninguna.
+    usuario.especialidad = _especialidad_segun_rol(usuario.rol, payload.especialidad or usuario.especialidad)
     if payload.activo is not None:
         usuario.activo = payload.activo
     for campo in ("institucion", "registro_profesional", "telefono"):

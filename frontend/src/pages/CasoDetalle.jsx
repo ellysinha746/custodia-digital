@@ -66,7 +66,11 @@ function FilaArchivo({ archivo, caso, onCambio }) {
   const { notificar } = useToast();
   const usuario = useUsuario(); // Sprint 5: acciones según el rol
 
-  const campos = CAMPOS_METADATOS[caso.especialidad] || [];
+  // Sprint 5: si el caso tiene varias especialidades, se juntan sus campos (sin repetir).
+  const especialidadesCaso = caso.especialidades?.length ? caso.especialidades : [caso.especialidad];
+  const campos = especialidadesCaso
+    .flatMap((k) => CAMPOS_METADATOS[k] || [])
+    .filter((c, i, todos) => todos.findIndex((x) => x.clave === c.clave) === i);
   const puedeEscribir = caso.estado !== "cerrado";
 
   const cargarHistorial = useCallback(async () => {
@@ -221,7 +225,7 @@ function FilaArchivo({ archivo, caso, onCambio }) {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-label-ui text-label-ui text-outline uppercase tracking-wider">
-                    Metadatos ({ESPECIALIDADES[caso.especialidad].label})
+                    Metadatos ({especialidadesCaso.map((k) => ESPECIALIDADES[k].label).join(", ")})
                   </span>
                   {puedeEscribir && puede(usuario, "editar_metadatos") && !editandoMeta && (
                     <button
@@ -495,7 +499,7 @@ export default function CasoDetalle() {
   }
 
   const est = ESTADOS_CASO[caso.estado];
-  const esp = ESPECIALIDADES[caso.especialidad];
+  const listaEsp = caso.especialidades?.length ? caso.especialidades : [caso.especialidad];
   const cerrado = caso.estado === "cerrado";
 
   return (
@@ -510,12 +514,14 @@ export default function CasoDetalle() {
 
       <div className="flex items-start justify-between gap-space-md mb-space-lg flex-wrap">
         <div>
-          <div className="flex items-center gap-space-sm mb-1">
+          <div className="flex items-center gap-space-sm mb-1 flex-wrap">
             <h1 className="font-headline-lg text-headline-lg text-on-surface">{caso.numero_caso}</h1>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-high text-secondary font-label-ui text-label-ui uppercase tracking-wider">
-              <span className="material-symbols-outlined text-sm">{esp.icon}</span>
-              {esp.label}
-            </span>
+            {listaEsp.map((k) => (
+              <span key={k} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-high text-secondary font-label-ui text-label-ui uppercase tracking-wider">
+                <span className="material-symbols-outlined text-sm">{ESPECIALIDADES[k].icon}</span>
+                {ESPECIALIDADES[k].label}
+              </span>
+            ))}
           </div>
           <span className={`inline-flex items-center gap-1.5 font-label-ui text-label-ui uppercase tracking-wider ${est.text}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${est.dot}`}></span>

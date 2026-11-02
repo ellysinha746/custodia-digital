@@ -114,8 +114,14 @@ function Pasos({ estado }) {
 }
 
 /* ----------------------------------------------------------- formularios */
-function FormDesignar({ casoId, onListo, onCancelar }) {
-  const peritos = usePadron("perito");
+const ESPECIALIDADES = { audio: "Audio", video: "Video", informatica: "Informática", telefonia: "Telefonía" };
+
+function FormDesignar({ caso, onListo, onCancelar }) {
+  const casoId = caso.id;
+  const especialidadesCaso = caso.especialidades?.length ? caso.especialidades : [caso.especialidad];
+  const [especialidad, setEspecialidad] = useState(especialidadesCaso[0]);
+  // Sprint 5: solo peritos oficiales de la especialidad elegida
+  const peritos = usePadron("perito").filter((p) => p.especialidad === especialidad);
   const [perito, setPerito] = useState("");
   const [disposicion, setDisposicion] = useState("");
   const [objetivos, setObjetivos] = useState([""]);
@@ -129,6 +135,7 @@ function FormDesignar({ casoId, onListo, onCancelar }) {
     try {
       const { data } = await api.post(`/casos/${casoId}/pericias`, {
         perito_oficial_id: perito,
+        especialidad,
         disposicion_fiscal: disposicion,
         objetivos: objetivos.filter((o) => o.trim()),
         plazo_dias: Number(plazo),
@@ -145,11 +152,17 @@ function FormDesignar({ casoId, onListo, onCancelar }) {
   return (
     <form onSubmit={enviar} className="bg-surface-container-high rounded-lg p-space-md flex flex-col gap-space-sm mb-space-md">
       <h3 className="font-headline-sm text-headline-sm text-on-surface">Designar perito oficial</h3>
-      <div className="grid sm:grid-cols-3 gap-space-sm">
+      <div className="grid sm:grid-cols-4 gap-space-sm">
+        <label className="flex flex-col gap-1">
+          <span className="font-label-code-sm text-label-code-sm text-outline">Especialidad de la pericia</span>
+          <select value={especialidad} onChange={(e) => { setEspecialidad(e.target.value); setPerito(""); }} className={input}>
+            {especialidadesCaso.map((k) => <option key={k} value={k}>{ESPECIALIDADES[k]}</option>)}
+          </select>
+        </label>
         <label className="flex flex-col gap-1 sm:col-span-1">
           <span className="font-label-code-sm text-label-code-sm text-outline">Perito oficial (padrón)</span>
           <select required value={perito} onChange={(e) => setPerito(e.target.value)} className={input}>
-            <option value="">Elegir…</option>
+            <option value="">{peritos.length ? "Elegir…" : "No hay peritos de esta especialidad"}</option>
             {peritos.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.nombre} · {p.institucion || "sin institución"} ({p.pericias_activas} activas)
@@ -276,7 +289,9 @@ function FormSubrogar({ pericia, onListo, onCancelar }) {
   const [documento, setDocumento] = useState("");
   const [detalle, setDetalle] = useState("");
   const { notificar } = useToast();
-  const candidatos = (tipo === "oficial" ? oficiales : partes).filter((p) => !actuales.some((d) => d.perito.id === p.id));
+  const candidatos = (tipo === "oficial" ? oficiales.filter((p) => !pericia.especialidad || p.especialidad === pericia.especialidad) : partes).filter(
+    (p) => !actuales.some((d) => d.perito.id === p.id)
+  );
 
   useEffect(() => {
     api.get("/pericias-motivos-subrogacion").then(({ data }) => setMotivos(data)).catch(() => {});
@@ -364,6 +379,11 @@ function TarjetaPericia({ pericia, onCambio }) {
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-label-code-lg text-label-code-lg text-on-surface">{pericia.codigo}</span>
+            {pericia.especialidad && (
+              <span className="px-2 py-0.5 rounded bg-surface-container-high text-secondary font-label-ui text-label-ui uppercase tracking-wider">
+                {ESPECIALIDADES[pericia.especialidad] || pericia.especialidad}
+              </span>
+            )}
             <span className="font-body-sm text-body-sm text-on-surface-variant">· {pericia.disposicion_fiscal}</span>
           </div>
           <div className="mt-1.5"><Pasos estado={pericia.estado} /></div>
@@ -600,7 +620,7 @@ export default function Pericias({ caso, usuario }) {
           )}
         </div>
       </div>
-      {designando && <FormDesignar casoId={caso.id} onListo={() => { setDesignando(false); cargar(); }} onCancelar={() => setDesignando(false)} />}
+      {designando && <FormDesignar caso={caso} onListo={() => { setDesignando(false); cargar(); }} onCancelar={() => setDesignando(false)} />}
       {!pericias ? (
         <p className="font-body-sm text-body-sm text-outline">Cargando...</p>
       ) : pericias.length === 0 ? (

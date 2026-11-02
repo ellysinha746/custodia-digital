@@ -41,7 +41,10 @@ export default function Casos() {
   const [filtroEst, setFiltroEst] = useState("");
   const [modal, setModal] = useState(false);
   const [numero, setNumero] = useState("");
-  const [especialidad, setEspecialidad] = useState("informatica");
+  // Sprint 5: un caso puede tener varias especialidades
+  const [especialidades, setEspecialidades] = useState(["informatica"]);
+  const alternarEspecialidad = (k) =>
+    setEspecialidades((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
   const usuario = useUsuario(); // Sprint 5: botones según el rol
@@ -70,7 +73,7 @@ export default function Casos() {
     () =>
       casos.filter(
         (c) =>
-          (!filtroEsp || c.especialidad === filtroEsp) &&
+          (!filtroEsp || (c.especialidades?.length ? c.especialidades : [c.especialidad]).includes(filtroEsp)) &&
           (!filtroEst || c.estado === filtroEst) &&
           c.numero_caso.toLowerCase().includes(busqueda.toLowerCase())
       ),
@@ -89,6 +92,7 @@ export default function Casos() {
   const abrirModal = () => {
     setError("");
     setNumero("");
+    setEspecialidades(["informatica"]);
     setModal(true);
   };
 
@@ -107,9 +111,13 @@ export default function Casos() {
   const crearCaso = async (e) => {
     e.preventDefault();
     setError("");
+    if (especialidades.length === 0) {
+      setError("Elige al menos una especialidad.");
+      return;
+    }
     setGuardando(true);
     try {
-      await api.post("/casos", { numero_caso: numero.trim(), especialidad });
+      await api.post("/casos", { numero_caso: numero.trim(), especialidades });
       setModal(false);
       await cargar();
     } catch (err) {
@@ -189,8 +197,8 @@ export default function Casos() {
         <table className="w-full text-left">
           <thead>
             <tr className="bg-surface-container-lowest">
-              {["Número de caso", "Especialidad", "Estado", "Creado", "", ""].map((h) => (
-                <th key={h} className="px-space-md py-3 font-label-ui text-label-ui text-outline uppercase tracking-wider">
+              {["Número de caso", "Especialidades", "Estado", "Creado", "", ""].map((h, i) => (
+                <th key={i} className="px-space-md py-3 font-label-ui text-label-ui text-outline uppercase tracking-wider">
                   {h}
                 </th>
               ))}
@@ -198,7 +206,7 @@ export default function Casos() {
           </thead>
           <tbody>
             {visibles.map((c) => {
-              const esp = ESPECIALIDADES[c.especialidad];
+              const lista = c.especialidades?.length ? c.especialidades : [c.especialidad];
               const est = ESTADOS[c.estado];
               return (
                 <tr
@@ -210,10 +218,14 @@ export default function Casos() {
                     {c.numero_caso}
                   </td>
                   <td className="px-space-md py-4">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-high text-secondary font-label-ui text-label-ui uppercase tracking-wider">
-                      <span className="material-symbols-outlined text-sm">{esp.icon}</span>
-                      {esp.label}
-                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {lista.map((k) => (
+                        <span key={k} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-high text-secondary font-label-ui text-label-ui uppercase tracking-wider">
+                          <span className="material-symbols-outlined text-sm">{ESPECIALIDADES[k].icon}</span>
+                          {ESPECIALIDADES[k].label}
+                        </span>
+                      ))}
+                    </div>
                   </td>
                   <td className="px-space-md py-4">
                     <span className={`inline-flex items-center gap-1.5 font-label-ui text-label-ui uppercase tracking-wider ${est.text}`}>
@@ -281,20 +293,23 @@ export default function Casos() {
             />
 
             <label className="block font-label-ui text-label-ui text-on-surface-variant uppercase tracking-wider mb-2">
-              Especialidad
+              Especialidades <span className="normal-case tracking-normal text-outline">(una o varias)</span>
             </label>
             <div className="grid grid-cols-2 gap-space-sm mb-space-md">
               {Object.entries(ESPECIALIDADES).map(([k, v]) => (
                 <button
                   type="button"
                   key={k}
-                  onClick={() => setEspecialidad(k)}
+                  onClick={() => alternarEspecialidad(k)}
                   className={`flex items-center gap-2 px-3 py-3 rounded-lg font-body-md text-body-md transition-colors ${
-                    especialidad === k
+                    especialidades.includes(k)
                       ? "bg-primary/15 text-primary ring-1 ring-primary/40"
                       : "bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container"
                   }`}
                 >
+                  <span className="material-symbols-outlined text-lg">
+                    {especialidades.includes(k) ? "check_box" : "check_box_outline_blank"}
+                  </span>
                   <span className="material-symbols-outlined text-lg">{v.icon}</span>
                   {v.label}
                 </button>

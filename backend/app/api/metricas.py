@@ -56,13 +56,11 @@ def obtener_metricas(
     por_estado = dict(
         db.query(Caso.estado, func.count()).filter(Caso.eliminado_en.is_(None)).group_by(Caso.estado).all()
     )
-    por_especialidad = {
-        esp.value: n
-        for esp, n in db.query(Caso.especialidad, func.count())
-        .filter(Caso.eliminado_en.is_(None))
-        .group_by(Caso.especialidad)
-        .all()
-    }
+    # Sprint 5: un caso con varias especialidades cuenta en cada una de ellas.
+    por_especialidad: Dict[str, int] = {}
+    for (lista,) in db.query(Caso.especialidades).filter(Caso.eliminado_en.is_(None)).all():
+        for esp in lista or []:
+            por_especialidad[esp] = por_especialidad.get(esp, 0) + 1
 
     # Tiempo promedio de cierre: solo casos cerrados que tienen fecha de cierre registrada.
     cerrados = vivos.filter(Caso.estado == EstadoCasoEnum.cerrado, Caso.cerrado_en.isnot(None)).all()

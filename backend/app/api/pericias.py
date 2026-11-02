@@ -14,7 +14,7 @@ from app.core.security import get_current_user
 from app.core.permisos import exigir, puede_ver_caso
 from app.models.caso import Caso, EstadoCasoEnum
 from app.models.pericia import Pericia, DesignacionPericia, ObservacionPericia
-from app.models.usuario import Usuario, RolEnum
+from app.models.usuario import Usuario, RolEnum, EspecialidadEnum
 from app.services import pericia_service as reglas
 
 # Sprint 5 (épica H19, historias 19.3 a 19.8): trámite de la pericia.
@@ -78,6 +78,7 @@ class PericiaOut(BaseModel):
     codigo: str
     caso_id: UUID
     caso_numero: str
+    especialidad: Optional[str] = None
     estado: str
     estado_etiqueta: str
     disposicion_fiscal: str
@@ -105,6 +106,7 @@ class PericiaOut(BaseModel):
 
 class DesignarIn(BaseModel):
     perito_oficial_id: UUID
+    especialidad: Optional[EspecialidadEnum] = None  # una de las especialidades del caso
     disposicion_fiscal: str = Field(min_length=1)
     objetivos: List[str] = Field(min_length=1)
     plazo_dias: int = Field(ge=1, le=365)
@@ -144,6 +146,7 @@ def _a_salida(p: Pericia, usuario) -> PericiaOut:
         codigo=p.codigo,
         caso_id=p.caso_id,
         caso_numero=p.caso.numero_caso,
+        especialidad=p.especialidad,
         estado=p.estado,
         estado_etiqueta=reglas.etiqueta_estado(p.estado),
         disposicion_fiscal=p.disposicion_fiscal,
@@ -214,6 +217,19 @@ def _obtener_pericia(db: Session, pericia_id: UUID, usuario) -> Pericia:
 def _exigir_accion(pericia: Pericia, usuario, accion: str, mensaje: str) -> None:
     if accion not in reglas.acciones_disponibles(pericia, usuario):
         raise HTTPException(status_code=409, detail=mensaje)
+
+
+ETIQUETA_ESPECIALIDAD = {"audio": "audio", "video": "video", "informatica": "informática", "telefonia": "telefonía"}
+
+
+def _exigir_especialidad(perito: Usuario, especialidad: Optional[str]) -> None:
+    """Sprint 5: el perito oficial debe ser de la especialidad de la pericia."""
+    if especialidad and perito.especialidad and perito.especialidad.value != especialidad:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{perito.nombre} es perito de {ETIQUETA_ESPECIALIDAD.get(perito.especialidad.value)}; "
+            f"esta pericia es de {ETIQUETA_ESPECIALIDAD.get(especialidad, especialidad)}.",
+        )
 
 
 def _perito_habilitado(db: Session, perito_id: UUID, rol: RolEnum) -> Usuario:
@@ -296,6 +312,11 @@ def designar_pericia(
     if caso.estado == EstadoCasoEnum.cerrado:
         raise HTTPException(status_code=409, detail="El caso está cerrado: no se pueden designar pericias.")
     perito = _perito_habilitado(db, payload.perito_oficial_id, RolEnum.perito)
+    especialidades_caso = caso.especialidades or [caso.especialidad.value]
+    especialidad = payload.especialidad.value if payload.especialidad else especialidades_caso[0]
+    if especialidad not in especialidades_caso:
+        raise HTTPException(status_code=400, detail="Esa especialidad no forma parte del caso.")
+    _exigir_especialidad(perito, especialidad)
     objetivos = [o.strip() for o in payload.objetivos if o.strip()]
     if not objetivos:
         raise HTTPException(status_code=400, detail="Indica al menos un objetivo de la pericia.")
@@ -303,6 +324,7 @@ def designar_pericia(
     pericia = Pericia(
         caso_id=caso.id,
         codigo=reglas.nuevo_codigo(db),
+        especialidad=especialidad,
         estado="designada",
         disposicion_fiscal=payload.disposicion_fiscal.strip(),
         objetivos=[{"texto": o, "conclusion": None} for o in objetivos],
@@ -323,7 +345,8 @@ def designar_pericia(
     )
     reglas.registrar_evento(
         db, pericia, usuario_actual, "designacion",
-        f"Designa a {perito.nombre} como perito oficial ({pericia.disposicion_fiscal}); {len(objetivos)} objetivo(s), plazo {payload.plazo_dias} día(s).",
+        f"Designa a {perito.nombre} como perito oficial de {ETIQUETA_ESPECIALIDAD.get(especialidad, especialidad)} "
+        f"({pericia.disposicion_fiscal}); {len(objetivos)} objetivo(s), plazo {payload.plazo_dias} día(s).",
     )
     db.commit()
     db.refresh(pericia)
@@ -558,6 +581,8 @@ def subrogar_perito(
         raise HTTPException(status_code=400, detail="El perito entrante debe ser distinto del saliente.")
     rol = RolEnum.perito if payload.tipo == "oficial" else RolEnum.perito_parte
     entrante = _perito_habilitado(db, payload.entrante_id, rol)
+    if payload.tipo == "oficial":
+        _exigir_especialidad(entrante, pericia.especialidad)
 
     saliente.activa = False
     saliente.subrogado_en = reglas.ahora()

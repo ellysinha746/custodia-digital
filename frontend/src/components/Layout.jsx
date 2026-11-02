@@ -221,7 +221,9 @@ export default function Layout({ children }) {
                 {usuario ? usuario.nombre : "Perito"}
               </span>
               <span className="font-label-code-sm text-label-code-sm text-on-surface-variant">
-                {usuario ? `${ETIQUETAS_ROL[usuario.rol] || usuario.rol} · ${usuario.especialidad}` : "Cargando..."}
+                {usuario
+                  ? [ETIQUETAS_ROL[usuario.rol] || usuario.rol, usuario.especialidad].filter(Boolean).join(" · ")
+                  : "Cargando..."}
               </span>
             </div>
           </div>

@@ -44,9 +44,16 @@ def crear_caso(
     if existe:
         raise HTTPException(status_code=409, detail="Ya existe un caso con ese número.")
 
+    # Sprint 5: una o varias especialidades, sin repetir y en orden fijo.
+    elegidas = set(payload.especialidades or ([payload.especialidad] if payload.especialidad else []))
+    lista = [e for e in EspecialidadEnum if e in elegidas]
+    if not lista:
+        raise HTTPException(status_code=400, detail="Elige al menos una especialidad para el caso.")
+
     nuevo_caso = Caso(
         numero_caso=payload.numero_caso,
-        especialidad=payload.especialidad,
+        especialidad=lista[0],
+        especialidades=[e.value for e in lista],
         usuario_id=usuario_actual.id,
     )
     db.add(nuevo_caso)
@@ -70,7 +77,7 @@ def listar_casos(
     query = _query_visible(db, usuario_actual)
 
     if especialidad:
-        query = query.filter(Caso.especialidad == especialidad)
+        query = query.filter(Caso.especialidades.contains([especialidad.value]))
     if estado:
         query = query.filter(Caso.estado == estado)
 
@@ -107,6 +114,7 @@ def listar_papelera(
                 id=caso.id,
                 numero_caso=caso.numero_caso,
                 especialidad=caso.especialidad,
+                especialidades=caso.especialidades or [caso.especialidad.value],
                 estado=caso.estado,
                 usuario_id=caso.usuario_id,
                 creado_en=caso.creado_en,

@@ -74,7 +74,7 @@ export default function Usuarios() {
     e.preventDefault();
     setGuardando(true);
     try {
-      await api.post("/usuarios", form);
+      await api.post("/usuarios", { ...form, especialidad: ES_PERITO_ROL(form.rol) ? form.especialidad : null });
       notificar(`Usuario ${form.nombre} creado como ${ETIQUETAS_ROL[form.rol]}.`, { tipo: "success" });
       setForm(VACIO);
       setFormAbierto(false);
@@ -123,11 +123,16 @@ export default function Usuarios() {
             <input required placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className={claseInput} />
             <input required type="email" placeholder="Correo" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={claseInput} />
             <input required type="password" minLength={8} placeholder="Contraseña (8+ caracteres)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={claseInput} />
-            <select value={form.especialidad} onChange={(e) => setForm({ ...form, especialidad: e.target.value })} className={claseInput}>
-              {Object.entries(ESPECIALIDADES).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
+            {/* Sprint 5: solo los peritos tienen especialidad; el fiscal y el jefe, no */}
+            {ES_PERITO_ROL(form.rol) ? (
+              <select value={form.especialidad} onChange={(e) => setForm({ ...form, especialidad: e.target.value })} className={claseInput}>
+                {Object.entries(ESPECIALIDADES).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            ) : (
+              <p className={`${claseInput} text-outline`}>Sin especialidad (no es perito)</p>
+            )}
             <select value={form.rol} onChange={(e) => setForm({ ...form, rol: e.target.value })} className={claseInput}>
               {Object.entries(ETIQUETAS_ROL).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
@@ -181,7 +186,7 @@ export default function Usuarios() {
                     )}
                   </td>
                   <td className="px-space-md py-3 font-body-sm text-body-sm text-on-surface-variant">
-                    {ESPECIALIDADES[u.especialidad]}
+                    {u.especialidad ? ESPECIALIDADES[u.especialidad] : "—"}
                   </td>
                   <td className="px-space-md py-3">
                     <select

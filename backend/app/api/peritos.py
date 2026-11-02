@@ -27,7 +27,7 @@ class PeritoOut(BaseModel):
     email: str
     tipo: str  # perito | perito_parte
     tipo_etiqueta: str
-    especialidad: EspecialidadEnum
+    especialidad: Optional[EspecialidadEnum] = None
     institucion: Optional[str] = None
     registro_profesional: Optional[str] = None
     telefono: Optional[str] = None
