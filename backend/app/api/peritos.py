@@ -142,7 +142,11 @@ def _perfil(db: Session, perito: Usuario) -> PerfilOut:
         vistas.add(p.id)
         pendientes = sum(1 for o in p.observaciones if not o.respuesta)
         alerta = None
-        if p.estado == "designada" and p.fecha_limite <= pronto:
+        if d.tipo == "oficial" and d.aceptacion == "pendiente":
+            alerta = "Plazo para aceptar el cargo vencido" if reglas.aceptacion_vencida(d) else "Cargo por aceptar o inhibirte"
+        elif d.tipo == "oficial" and d.aceptacion == "aceptada" and d.juramento_en is None:
+            alerta = "Falta prestar juramento"
+        elif p.estado == "designada" and p.fecha_limite <= pronto:
             alerta = "Plazo de la pericia vencido" if p.fecha_limite < reglas.ahora() else "Plazo de la pericia por vencer"
         elif p.estado in ("en_traslado", "observada") and p.traslado_vence_en and p.traslado_vence_en <= pronto and d.tipo == "parte":
             alerta = "Traslado vencido" if reglas.traslado_vencido(p) else "Traslado por vencer"

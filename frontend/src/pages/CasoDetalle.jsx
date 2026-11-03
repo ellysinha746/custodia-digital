@@ -499,6 +499,8 @@ export default function CasoDetalle() {
   }
 
   const est = ESTADOS_CASO[caso.estado];
+  // Sprint 5: solo quien creó el caso o el jefe de laboratorio cambia su estado o lo elimina
+  const esTitular = usuario?.rol === "admin" || usuario?.id === caso.usuario_id;
   const listaEsp = caso.especialidades?.length ? caso.especialidades : [caso.especialidad];
   const cerrado = caso.estado === "cerrado";
 
@@ -530,7 +532,7 @@ export default function CasoDetalle() {
         </div>
 
         <div className="flex gap-space-sm">
-          {est.siguiente && puede(usuario, "cambiar_estado_caso") && (
+          {est.siguiente && puede(usuario, "cambiar_estado_caso") && esTitular && (
             <button
               onClick={avanzarEstado}
               disabled={cambiandoEstado}
@@ -542,7 +544,7 @@ export default function CasoDetalle() {
               {est.siguiente === "cerrado" ? "Cerrar caso" : "Pasar a en proceso"}
             </button>
           )}
-          {puede(usuario, "eliminar_caso") && (
+          {puede(usuario, "eliminar_caso") && esTitular && (
             <button
               onClick={eliminarCaso}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-error hover:bg-error/10 font-label-ui text-label-ui"

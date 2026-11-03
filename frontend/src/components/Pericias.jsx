@@ -31,6 +31,10 @@ const EVENTO = {
   conclusion: { icono: "verified", texto: "Concluida" },
   subrogacion: { icono: "swap_horiz", texto: "Subrogación" },
   descarga_informe: { icono: "download", texto: "Descarga del informe" },
+  aceptacion: { icono: "how_to_reg", texto: "Acepta el cargo" },
+  inhibicion: { icono: "person_off", texto: "Inhibición" },
+  juramento: { icono: "front_hand", texto: "Juramento" },
+  consulta_acta: { icono: "visibility", texto: "Consulta del acta de juramento" },
 };
 
 const input =
@@ -126,6 +130,7 @@ function FormDesignar({ caso, onListo, onCancelar }) {
   const [disposicion, setDisposicion] = useState("");
   const [objetivos, setObjetivos] = useState([""]);
   const [plazo, setPlazo] = useState(15);
+  const [plazoAceptar, setPlazoAceptar] = useState(3);
   const [enviando, setEnviando] = useState(false);
   const { notificar } = useToast();
 
@@ -139,8 +144,9 @@ function FormDesignar({ caso, onListo, onCancelar }) {
         disposicion_fiscal: disposicion,
         objetivos: objetivos.filter((o) => o.trim()),
         plazo_dias: Number(plazo),
+        plazo_aceptacion_dias: Number(plazoAceptar),
       });
-      notificar(`Pericia ${data.codigo} designada. Se notificó al perito.`, { tipo: "success" });
+      notificar(`Pericia ${data.codigo} designada. El perito tiene ${plazoAceptar} día(s) para aceptar o inhibirse.`, { tipo: "success" });
       onListo();
     } catch (err) {
       notificar(detalleError(err, "Revisa los datos de la designación."), { tipo: "error" });
@@ -152,7 +158,7 @@ function FormDesignar({ caso, onListo, onCancelar }) {
   return (
     <form onSubmit={enviar} className="bg-surface-container-high rounded-lg p-space-md flex flex-col gap-space-sm mb-space-md">
       <h3 className="font-headline-sm text-headline-sm text-on-surface">Designar perito oficial</h3>
-      <div className="grid sm:grid-cols-4 gap-space-sm">
+      <div className="grid sm:grid-cols-5 gap-space-sm">
         <label className="flex flex-col gap-1">
           <span className="font-label-code-sm text-label-code-sm text-outline">Especialidad de la pericia</span>
           <select value={especialidad} onChange={(e) => { setEspecialidad(e.target.value); setPerito(""); }} className={input}>
@@ -175,8 +181,12 @@ function FormDesignar({ caso, onListo, onCancelar }) {
           <input required value={disposicion} onChange={(e) => setDisposicion(e.target.value)} placeholder="Disposición Fiscal N° 045-2026-MP" className={input} />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="font-label-code-sm text-label-code-sm text-outline">Plazo (días)</span>
+          <span className="font-label-code-sm text-label-code-sm text-outline">Plazo de la pericia (días)</span>
           <input required type="number" min={1} max={365} value={plazo} onChange={(e) => setPlazo(e.target.value)} className={input} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="font-label-code-sm text-label-code-sm text-outline">Días para aceptar el cargo</span>
+          <input required type="number" min={1} max={15} value={plazoAceptar} onChange={(e) => setPlazoAceptar(e.target.value)} className={input} />
         </label>
       </div>
       <div className="flex flex-col gap-1.5">
@@ -342,8 +352,197 @@ function FormSubrogar({ pericia, onListo, onCancelar }) {
   );
 }
 
+/* ----------------------------------------------------------- aceptación del cargo y juramento (CPP art. 174) */
+function FormInhibirse({ pericia, onListo, onCancelar }) {
+  const [motivos, setMotivos] = useState([]);
+  const [motivo, setMotivo] = useState("amistad_enemistad");
+  const [detalle, setDetalle] = useState("");
+  const { notificar } = useToast();
+  useEffect(() => {
+    api.get("/pericias-motivos-inhibicion").then(({ data }) => setMotivos(data)).catch(() => {});
+  }, []);
+  return (
+    <FormSimple
+      titulo="Inhibirme del cargo"
+      textoBoton="Inhibirme"
+      onCancelar={onCancelar}
+      onEnviar={async () => {
+        if (!window.confirm("Al inhibirte dejas el cargo y pierdes el acceso a este caso. ¿Continuar?")) return;
+        try {
+          await api.post(`/pericias/${pericia.id}/inhibirse`, { motivo, detalle });
+          notificar("Te inhibiste del cargo. Se notificó al fiscal.", { tipo: "success" });
+          onListo();
+        } catch (err) {
+          notificar(detalleError(err, "Explica el motivo (al menos 10 caracteres)."), { tipo: "error" });
+        }
+      }}
+    >
+      <select value={motivo} onChange={(e) => setMotivo(e.target.value)} className={input}>
+        {motivos.map((m) => <option key={m.valor} value={m.valor}>{m.etiqueta}</option>)}
+      </select>
+      <textarea required minLength={10} rows={3} value={detalle} onChange={(e) => setDetalle(e.target.value)}
+        placeholder="Ej. Conozco personalmente al investigado: fuimos compañeros de trabajo entre 2019 y 2022." className={input} />
+    </FormSimple>
+  );
+}
+
+function FormJuramento({ pericia, usuario, onListo, onCancelar }) {
+  const [forma, setForma] = useState("juramento");
+  const [firma, setFirma] = useState("");
+  const [sinImpedimento, setSinImpedimento] = useState(false);
+  const { notificar } = useToast();
+  return (
+    <FormSimple
+      titulo="Prestar juramento (CPP art. 174)"
+      textoBoton={forma === "juramento" ? "Juro" : "Prometo por mi honor"}
+      onCancelar={onCancelar}
+      onEnviar={async () => {
+        try {
+          await api.post(`/pericias/${pericia.id}/juramentar`, { forma, firma, sin_impedimento: sinImpedimento });
+          notificar("Juramento registrado. El fiscal ya puede ver el acta.", { tipo: "success" });
+          onListo();
+        } catch (err) {
+          notificar(detalleError(err, "No se pudo registrar el juramento."), { tipo: "error" });
+        }
+      }}
+    >
+      <div className="flex gap-space-md font-body-sm text-body-sm text-on-surface">
+        <label className="flex items-center gap-1.5">
+          <input type="radio" checked={forma === "juramento"} onChange={() => setForma("juramento")} /> Juramento
+        </label>
+        <label className="flex items-center gap-1.5">
+          <input type="radio" checked={forma === "promesa"} onChange={() => setForma("promesa")} /> Promesa de honor
+        </label>
+      </div>
+      <p className="font-body-sm text-body-sm text-on-surface-variant bg-surface-container-lowest rounded-md p-space-sm">
+        Yo, <b className="text-on-surface">{usuario?.nombre}</b>, {forma === "juramento" ? "JURO" : "PROMETO POR MI HONOR"} desempeñar con
+        verdad y diligencia el cargo de perito oficial en la pericia {pericia.codigo} del caso {pericia.caso_numero}, y declaro que no
+        me encuentro incurso en ninguna causal de impedimento y que guardaré reserva sobre la información a la que acceda.
+      </p>
+      <label className="flex items-start gap-2 font-body-sm text-body-sm text-on-surface">
+        <input type="checkbox" required checked={sinImpedimento} onChange={(e) => setSinImpedimento(e.target.checked)} className="mt-1" />
+        Declaro que no conozco ni tengo relación con las partes, ni otro impedimento para ejercer el cargo.
+      </label>
+      <input required value={firma} onChange={(e) => setFirma(e.target.value)} className={input}
+        placeholder={`Firma: escribe tu nombre completo (${usuario?.nombre || ""})`} />
+    </FormSimple>
+  );
+}
+
+function FormReemplazo({ pericia, onListo, onCancelar }) {
+  const inhibidos = pericia.designaciones.filter((d) => d.aceptacion === "inhibida").map((d) => d.perito.id);
+  const candidatos = usePadron("perito").filter(
+    (p) => (!pericia.especialidad || p.especialidad === pericia.especialidad) && !inhibidos.includes(p.id)
+  );
+  const [entrante, setEntrante] = useState("");
+  const [documento, setDocumento] = useState("");
+  const [plazo, setPlazo] = useState(3);
+  const { notificar } = useToast();
+  return (
+    <FormSimple
+      titulo="Designar nuevo perito oficial"
+      textoBoton="Designar"
+      onCancelar={onCancelar}
+      onEnviar={async () => {
+        try {
+          await api.post(`/pericias/${pericia.id}/reemplazar-oficial`, { entrante_id: entrante, documento, plazo_aceptacion_dias: Number(plazo) });
+          notificar("Nuevo perito designado. Se le notificó para que acepte o se inhiba.", { tipo: "success" });
+          onListo();
+        } catch (err) {
+          notificar(detalleError(err, "No se pudo designar."), { tipo: "error" });
+        }
+      }}
+    >
+      <div className="grid sm:grid-cols-3 gap-space-sm">
+        <select required value={entrante} onChange={(e) => setEntrante(e.target.value)} className={input}>
+          <option value="">{candidatos.length ? "Perito oficial (padrón)…" : "No hay otros peritos de esta especialidad"}</option>
+          {candidatos.map((p) => <option key={p.id} value={p.id}>{p.nombre} · {p.institucion || "—"}</option>)}
+        </select>
+        <input required value={documento} onChange={(e) => setDocumento(e.target.value)} placeholder="Disposición de la nueva designación" className={input} />
+        <label className="flex items-center gap-2 font-body-sm text-body-sm text-on-surface-variant">
+          Días para aceptar
+          <input type="number" min={1} max={15} value={plazo} onChange={(e) => setPlazo(e.target.value)} className={`${input} w-20`} />
+        </label>
+      </div>
+    </FormSimple>
+  );
+}
+
+/** Estado del cargo del perito oficial: lo que el fiscal necesita ver de un vistazo. */
+function EstadoCargo({ pericia, onCambio }) {
+  const [verTexto, setVerTexto] = useState(false);
+  const { notificar } = useToast();
+  const d = pericia.designaciones.find((x) => x.activa && x.tipo === "oficial");
+  const ultimaInhibicion = [...pericia.designaciones].reverse().find((x) => x.aceptacion === "inhibida");
+  const caja = "rounded-lg px-space-sm py-2 font-body-sm text-body-sm flex flex-col gap-1";
+
+  if (!d) {
+    return (
+      <div className={`${caja} bg-error/10 text-error`}>
+        <div className="flex items-center gap-2"><span className="material-symbols-outlined text-base">person_off</span>
+          Sin perito oficial: {ultimaInhibicion ? `${ultimaInhibicion.perito.nombre} se inhibió.` : "falta designar."}</div>
+        {ultimaInhibicion && (
+          <div className="text-on-surface-variant">
+            {ultimaInhibicion.inhibicion_motivo} — “{ultimaInhibicion.inhibicion_detalle}” · {fecha(ultimaInhibicion.subrogado_en)}
+          </div>
+        )}
+      </div>
+    );
+  }
+  if (d.aceptacion === "pendiente") {
+    return (
+      <div className={`${caja} ${d.aceptacion_vencida ? "bg-error/10 text-error" : "bg-amber-400/10 text-amber-400"}`}>
+        <div className="flex items-center gap-2"><span className="material-symbols-outlined text-base">hourglass_top</span>
+          {d.perito.nombre}: pendiente de aceptar el cargo · {d.aceptacion_vencida ? "plazo vencido el" : "vence"} {fecha(d.aceptacion_vence_en)}</div>
+        {d.aceptacion_vencida && <div className="text-on-surface-variant">No respondió a tiempo: puedes subrogarlo con el motivo “No aceptó el cargo en el plazo”.</div>}
+      </div>
+    );
+  }
+  if (!d.juramento_en) {
+    return (
+      <div className={`${caja} bg-amber-400/10 text-amber-400`}>
+        <div className="flex items-center gap-2"><span className="material-symbols-outlined text-base">how_to_reg</span>
+          {d.perito.nombre} aceptó el cargo el {fecha(d.aceptada_en)} · falta que preste juramento</div>
+      </div>
+    );
+  }
+  if (d.juramento_forma === "historico") {
+    return (
+      <div className={`${caja} bg-surface-container-high text-on-surface-variant`}>
+        <div className="flex items-center gap-2"><span className="material-symbols-outlined text-base">history</span>
+          Designación anterior a la juramentación en línea (sin acta).</div>
+      </div>
+    );
+  }
+  return (
+    <div className={`${caja} bg-tertiary/10 text-tertiary`}>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="material-symbols-outlined text-base">verified_user</span>
+        {d.perito.nombre} {d.juramento_forma === "juramento" ? "juró" : "prometió por su honor"} el {fecha(d.juramento_en)}
+        <button onClick={() => setVerTexto(!verTexto)} className="text-primary hover:underline ml-1">{verTexto ? "ocultar texto" : "ver texto"}</button>
+        <button
+          onClick={() =>
+            bajar(`/designaciones-pericia/${d.id}/acta`, `Acta_juramento_${pericia.codigo}.pdf`)
+              .then(onCambio)
+              .catch(() => notificar("No se pudo descargar el acta.", { tipo: "error" }))
+          }
+          className="inline-flex items-center gap-1 text-primary hover:underline"
+        >
+          <span className="material-symbols-outlined text-base">picture_as_pdf</span>Acta de juramento
+        </button>
+      </div>
+      {verTexto && (
+        <div className="text-on-surface-variant">
+          <p>“{d.juramento_texto}”</p>
+          <p className="font-label-code-sm text-label-code-sm text-outline mt-1">Aceptó el {fecha(d.aceptada_en)} · SHA-256 {d.juramento_hash?.slice(0, 24)}…</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ----------------------------------------------------------- tarjeta de pericia */
-function TarjetaPericia({ pericia, onCambio }) {
+function TarjetaPericia({ pericia, usuario, onCambio }) {
   const [form, setForm] = useState(null);
   const [verHistorial, setVerHistorial] = useState(false);
   const [plazoTraslado, setPlazoTraslado] = useState(5);
@@ -408,6 +607,11 @@ function TarjetaPericia({ pericia, onCambio }) {
           {pericia.peritos_parte.length ? pericia.peritos_parte.map((p, i) => <span key={p.id}>{i > 0 && ", "}<Persona p={p} /></span>) : <span className="text-outline">ninguno acreditado</span>}
         </div>
       </div>
+
+      {/* Estado del cargo del perito oficial (aceptación, inhibición, juramento y acta) */}
+      {(pericia.estado !== "concluida" || pericia.designaciones.some((d) => d.activa && d.tipo === "oficial" && d.tiene_acta)) && (
+        <EstadoCargo pericia={pericia} onCambio={onCambio} />
+      )}
 
       <div>
         <span className="font-label-ui text-label-ui text-outline uppercase tracking-wider">Objetivos de la pericia</span>
@@ -476,6 +680,26 @@ function TarjetaPericia({ pericia, onCambio }) {
       {/* Acciones según el estado y el rol (las define el backend) */}
       {a.length > 0 && !form && (
         <div className="flex flex-wrap gap-space-sm">
+          {a.includes("aceptar_cargo") && (
+            <button
+              onClick={() => window.confirm("¿Aceptas el cargo de perito oficial? Después deberás prestar juramento.") &&
+                accion(`/pericias/${pericia.id}/aceptar`, {}, "Cargo aceptado. Ahora presta juramento.")}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-ui text-label-ui"
+            >
+              <span className="material-symbols-outlined text-base">how_to_reg</span>Aceptar el cargo
+            </button>
+          )}
+          {a.includes("inhibirse") && <button onClick={() => setForm("inhibirse")} className={btnSec}><span className="material-symbols-outlined text-base">person_off</span>Inhibirme (tengo un impedimento)</button>}
+          {a.includes("juramentar") && (
+            <button onClick={() => setForm("juramentar")} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-ui text-label-ui">
+              <span className="material-symbols-outlined text-base">front_hand</span>Prestar juramento
+            </button>
+          )}
+          {a.includes("reemplazar_oficial") && (
+            <button onClick={() => setForm("reemplazo")} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-ui text-label-ui">
+              <span className="material-symbols-outlined text-base">gavel</span>Designar nuevo perito oficial
+            </button>
+          )}
           {a.includes("emitir") && <button onClick={() => setForm("emitir")} className={btnSec}><span className="material-symbols-outlined text-base">upload_file</span>Emitir pericia</button>}
           {a.includes("correr_traslado") && <button onClick={() => setForm("traslado")} className={btnSec}><span className="material-symbols-outlined text-base">forward_to_inbox</span>Correr traslado</button>}
           {a.includes("observar") && <button onClick={() => setForm("observar")} className={btnSec}><span className="material-symbols-outlined text-base">rate_review</span>Formular observación</button>}
@@ -494,6 +718,9 @@ function TarjetaPericia({ pericia, onCambio }) {
         </div>
       )}
 
+      {form === "inhibirse" && <FormInhibirse pericia={pericia} onListo={() => listo()} onCancelar={() => setForm(null)} />}
+      {form === "juramentar" && <FormJuramento pericia={pericia} usuario={usuario} onListo={() => listo()} onCancelar={() => setForm(null)} />}
+      {form === "reemplazo" && <FormReemplazo pericia={pericia} onListo={() => listo()} onCancelar={() => setForm(null)} />}
       {form === "emitir" && <FormEmitir pericia={pericia} onListo={() => listo()} onCancelar={() => setForm(null)} />}
       {form === "traslado" && (
         <FormSimple titulo="Correr traslado a la parte investigada" textoBoton="Correr traslado" onCancelar={() => setForm(null)}
@@ -564,9 +791,19 @@ function TarjetaPericia({ pericia, onCambio }) {
                 <li key={d.id} className="font-body-sm text-body-sm">
                   <span className={d.activa ? "text-on-surface" : "text-outline line-through"}>{d.perito.nombre}</span>
                   <span className="text-outline"> · {d.tipo === "oficial" ? "oficial" : "de parte"} · desde {fecha(d.designado_en, false)}</span>
-                  {!d.activa && (
+                  {!d.activa && d.aceptacion === "inhibida" && (
+                    <div className="text-error font-label-code-sm text-label-code-sm">
+                      Se inhibió {fecha(d.subrogado_en)} · {d.inhibicion_motivo}
+                    </div>
+                  )}
+                  {!d.activa && d.aceptacion !== "inhibida" && (
                     <div className="text-error font-label-code-sm text-label-code-sm">
                       Subrogado {fecha(d.subrogado_en)} · {d.motivo_subrogacion} · {d.documento_subrogacion}
+                    </div>
+                  )}
+                  {d.tipo === "oficial" && d.juramento_en && d.juramento_forma !== "historico" && (
+                    <div className="text-tertiary font-label-code-sm text-label-code-sm">
+                      {d.juramento_forma === "juramento" ? "Juramentó" : "Promesa de honor"} {fecha(d.juramento_en)}
                     </div>
                   )}
                 </li>
@@ -627,7 +864,7 @@ export default function Pericias({ caso, usuario }) {
         <p className="font-body-sm text-body-sm text-outline">Aún no se designa ninguna pericia en este caso.</p>
       ) : (
         <div className="flex flex-col gap-space-md">
-          {pericias.map((p) => <TarjetaPericia key={p.id} pericia={p} onCambio={cargar} />)}
+          {pericias.map((p) => <TarjetaPericia key={p.id} pericia={p} usuario={usuario} onCambio={cargar} />)}
         </div>
       )}
     </div>

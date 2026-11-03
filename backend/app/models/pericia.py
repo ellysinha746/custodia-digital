@@ -79,6 +79,19 @@ class DesignacionPericia(Base):
     documento_subrogacion = Column(String, nullable=True)
     subrogado_por_id = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True)
 
+    # Aceptación del cargo y juramento (CPP art. 174): solo para el perito oficial.
+    # aceptacion: pendiente | aceptada | inhibida  (None en peritos de parte)
+    aceptacion = Column(String, nullable=True)
+    aceptacion_vence_en = Column(DateTime(timezone=True), nullable=True)
+    aceptada_en = Column(DateTime(timezone=True), nullable=True)
+    inhibicion_motivo = Column(String, nullable=True)
+    inhibicion_detalle = Column(Text, nullable=True)
+    juramento_forma = Column(String, nullable=True)  # juramento | promesa | historico
+    juramento_texto = Column(Text, nullable=True)
+    juramento_en = Column(DateTime(timezone=True), nullable=True)
+    juramento_hash = Column(String, nullable=True)   # SHA-256 del acta
+    juramento_firma = Column(String, nullable=True)  # HMAC del servidor sobre el hash
+
     pericia = relationship("Pericia", back_populates="designaciones")
     usuario = relationship("Usuario", foreign_keys=[usuario_id])
 

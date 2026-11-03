@@ -38,6 +38,19 @@ def es_perito_parte(pericia: Pericia, usuario) -> bool:
     return any(d.usuario_id == usuario.id for d in designacion_activa(pericia, "parte"))
 
 
+def designacion_oficial_de(pericia: Pericia, usuario) -> Optional[DesignacionPericia]:
+    return next((d for d in designacion_activa(pericia, "oficial") if d.usuario_id == usuario.id), None)
+
+
+def juramentado(d: Optional[DesignacionPericia]) -> bool:
+    """El perito oficial solo trabaja después de aceptar el cargo y prestar juramento (CPP art. 174)."""
+    return d is not None and d.aceptacion == "aceptada" and d.juramento_en is not None
+
+
+def aceptacion_vencida(d: DesignacionPericia) -> bool:
+    return d.aceptacion == "pendiente" and d.aceptacion_vence_en is not None and ahora() > d.aceptacion_vence_en
+
+
 def dirige(usuario) -> bool:
     """El fiscal (o el jefe de laboratorio) dirige el trámite."""
     return usuario.rol in (RolEnum.fiscal, RolEnum.admin)
@@ -54,10 +67,19 @@ def acciones_disponibles(pericia: Pericia, usuario) -> List[str]:
     acciones = []
     if e == "concluida":
         return acciones
-    if es_perito_oficial(pericia, usuario) and e == "designada":
+    mia = designacion_oficial_de(pericia, usuario)
+    if mia is not None:
+        if mia.aceptacion == "pendiente":
+            acciones += ["aceptar_cargo", "inhibirse"]
+        elif mia.aceptacion == "aceptada" and mia.juramento_en is None:
+            acciones.append("juramentar")
+    if juramentado(mia) and e == "designada":
         acciones.append("emitir")
     if dirige(usuario):
-        acciones.append("subrogar")
+        if any(d.activa for d in pericia.designaciones):
+            acciones.append("subrogar")
+        if not designacion_activa(pericia, "oficial"):
+            acciones.append("reemplazar_oficial")  # el perito se inhibió: falta designar otro
         acciones.append("designar_parte")
         if e == "emitida":
             acciones.append("correr_traslado")
@@ -67,7 +89,7 @@ def acciones_disponibles(pericia: Pericia, usuario) -> List[str]:
             acciones.append("concluir")
     if es_perito_parte(pericia, usuario) and e in ("en_traslado", "observada") and not traslado_vencido(pericia):
         acciones.append("observar")
-    if es_perito_oficial(pericia, usuario) and e == "en_absolucion":
+    if juramentado(mia) and e == "en_absolucion":
         acciones.append("absolver")
     return acciones
 

@@ -8,7 +8,7 @@ from uuid import UUID
 from app.db.session import get_db
 from app.schemas.caso import CasoCreate, CasoOut, CasoEstadoUpdate, CasoPapeleraOut
 from app.models.caso import Caso, EstadoCasoEnum
-from app.models.usuario import EspecialidadEnum
+from app.models.usuario import EspecialidadEnum, RolEnum
 from app.core.config import settings
 from typing import List, Optional
 from app.core.security import get_current_user
@@ -31,6 +31,16 @@ def _obtener_caso_propio(db: Session, caso_id: UUID, usuario_actual, incluir_eli
     if not puede_ver_caso(db, usuario_actual, caso):
         raise HTTPException(status_code=404, detail="Caso no encontrado.")
     return caso
+
+
+def _exigir_titular(caso: Caso, usuario_actual) -> None:
+    """Sprint 5: un perito designado en un caso ajeno trabaja su pericia, pero no puede
+    cambiar el estado del caso ni eliminarlo. Eso queda para quien lo creó o el jefe."""
+    if usuario_actual.rol != RolEnum.admin and caso.usuario_id != usuario_actual.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Solo el perito que creó el caso o el jefe de laboratorio puede cambiar su estado o eliminarlo.",
+        )
 
 
 @router.post("", response_model=CasoOut, status_code=status.HTTP_201_CREATED)
@@ -143,6 +153,7 @@ def actualizar_estado_caso(
 ):
     exigir(usuario_actual, "cambiar_estado_caso")
     caso = _obtener_caso_propio(db, caso_id, usuario_actual)
+    _exigir_titular(caso, usuario_actual)
     if caso.estado == EstadoCasoEnum.cerrado:
         raise HTTPException(
             status_code=409,
@@ -169,6 +180,7 @@ def eliminar_caso(
     DIAS_PAPELERA días después (historia Sprint 3)."""
     exigir(usuario_actual, "eliminar_caso")
     caso = _obtener_caso_propio(db, caso_id, usuario_actual)
+    _exigir_titular(caso, usuario_actual)
     caso.eliminado_en = datetime.now(timezone.utc)
     db.commit()
 
