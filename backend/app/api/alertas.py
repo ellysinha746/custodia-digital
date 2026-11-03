@@ -7,9 +7,9 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.core.security import get_current_user
+from app.core.permisos import condicion_casos_visibles, exigir
 from app.models.alerta import Alerta
 from app.models.caso import Caso
-from app.models.usuario import RolEnum
 from app.schemas.alerta import AlertaOut, AtenderAlertaIn, ResumenAlertasOut, EscaneoOut
 from app.services.integridad_service import escanear_todos, notificar_alerta
 
@@ -17,16 +17,12 @@ router = APIRouter(prefix="/alertas", tags=["alertas"])
 
 
 def _query_visible(db: Session, usuario_actual):
-    """El admin ve todas; el perito solo las de sus casos."""
-    query = db.query(Alerta).join(Caso, Alerta.caso_id == Caso.id)
-    if usuario_actual.rol != RolEnum.admin:
-        query = query.filter(Caso.usuario_id == usuario_actual.id)
-    return query
+    """Cada rol ve las alertas de los casos que puede ver (Sprint 5)."""
+    return db.query(Alerta).join(Caso, Alerta.caso_id == Caso.id).filter(condicion_casos_visibles(usuario_actual))
 
 
 def _solo_admin(usuario_actual):
-    if usuario_actual.rol != RolEnum.admin:
-        raise HTTPException(status_code=403, detail="Solo un administrador puede hacer esto.")
+    exigir(usuario_actual, "atender_alertas")
 
 
 def _a_salida(a: Alerta) -> AlertaOut:

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.core.security import get_current_user
+from app.core.permisos import exigir
 from app.api.archivos import _obtener_archivo, _obtener_caso_editable
 from app.models.alerta import Alerta
 from app.models.log_custodia import LogCustodia, AccionEnum
@@ -36,6 +37,7 @@ def registrar_ficha(
     """Registra la ficha de un archivo que se subió sin ella.
     Una vez registrada NO se puede cambiar: es la referencia contra la que
     se compara después para detectar si el dispositivo fue sustituido."""
+    exigir(usuario_actual, "registrar_ficha")
     archivo = _obtener_archivo(db, archivo_id, usuario_actual)
     _obtener_caso_editable(db, archivo.caso_id, usuario_actual)
     if archivo.ficha_dispositivo:
@@ -74,6 +76,7 @@ def verificar_dispositivo(
     """Historia 13: compara los datos que el perito lee hoy del dispositivo
     con la ficha registrada en la subida. Si algún campo no coincide se
     genera una alerta (y su correo, historia 15)."""
+    exigir(usuario_actual, "verificar_dispositivo")
     archivo = _obtener_archivo(db, archivo_id, usuario_actual)
     if not archivo.ficha_dispositivo:
         raise HTTPException(
@@ -177,7 +180,7 @@ def exportar_ficha(
 
     documento = {
         "tipo_documento": "Ficha de metadatos del dispositivo de origen",
-        "caso": {"numero": caso.numero_caso, "especialidad": caso.especialidad.value},
+        "caso": {"numero": caso.numero_caso, "especialidades": caso.especialidades or [caso.especialidad.value]},
         "archivo": {
             "id": str(archivo.id),
             "nombre": archivo.nombre_original,
@@ -217,7 +220,7 @@ def exportar_ficha(
         filas = [
             ("tipo_documento", documento["tipo_documento"]),
             ("caso_numero", caso.numero_caso),
-            ("caso_especialidad", caso.especialidad.value),
+            ("caso_especialidades", ", ".join(caso.especialidades or [caso.especialidad.value])),
             ("archivo_id", str(archivo.id)),
             ("archivo_nombre", archivo.nombre_original),
             ("hash_sha256_original", archivo.hash_original),

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import { olvidarUsuario } from "../permisos";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -15,9 +16,11 @@ export default function Login() {
       const { data } = await api.post("/auth/login", { email, password });
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("refresh_token", data.refresh_token);
+      olvidarUsuario(); // Sprint 5: que se vuelva a leer el rol del usuario que entra
       navigate("/casos");
-    } catch {
-      setError("Email o contraseña incorrectos.");
+    } catch (err) {
+      // Sprint 5: un usuario desactivado recibe 403 con su propio mensaje
+      setError(err.response?.status === 403 ? err.response.data.detail : "Email o contraseña incorrectos.");
     }
   };
 

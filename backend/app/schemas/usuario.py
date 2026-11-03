@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel, EmailStr
 from uuid import UUID
 from app.models.usuario import EspecialidadEnum, RolEnum
@@ -12,8 +13,12 @@ class UsuarioOut(BaseModel):
     id: UUID
     nombre: str
     email: EmailStr
-    especialidad: EspecialidadEnum
+    especialidad: Optional[EspecialidadEnum] = None
     rol: RolEnum
+    activo: bool = True
+    institucion: Optional[str] = None
+    registro_profesional: Optional[str] = None
+    telefono: Optional[str] = None
 
     class Config:
         from_attributes = True

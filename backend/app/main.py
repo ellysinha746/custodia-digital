@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, casos, archivos, auditoria, busqueda, alertas, fichas, observadas, reportes, metricas
+from app.api import auth, casos, archivos, auditoria, busqueda, alertas, fichas, observadas, reportes, metricas, usuarios, peritos, pericias
 from app.core.config import settings
 from app.services.integridad_service import escanear_todos, notificar_alerta
 
@@ -49,6 +49,9 @@ app.include_router(fichas.router)
 app.include_router(observadas.router)
 app.include_router(reportes.router)
 app.include_router(metricas.router)
+app.include_router(usuarios.router)
+app.include_router(peritos.router)
+app.include_router(pericias.router)
 
 @app.get("/")
 def root():

@@ -57,4 +57,6 @@ def get_current_user(
     usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
     if usuario is None:
         raise credentials_exception
+    if not usuario.activo:  # Sprint 5 (historia 19.1)
+        raise HTTPException(status_code=403, detail="Tu usuario está desactivado. Contacta al jefe de laboratorio.")
     return usuario

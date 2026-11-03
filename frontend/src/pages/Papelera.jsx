@@ -73,7 +73,7 @@ export default function Papelera() {
                   {c.numero_caso}
                 </td>
                 <td className="px-space-md py-4 font-body-sm text-body-sm text-on-surface-variant">
-                  {ESPECIALIDADES[c.especialidad]}
+                  {(c.especialidades?.length ? c.especialidades : [c.especialidad]).map((k) => ESPECIALIDADES[k]).join(", ")}
                 </td>
                 <td className="px-space-md py-4 font-body-sm text-body-sm text-on-surface-variant">
                   {new Date(c.eliminado_en).toLocaleDateString("es-PE", { dateStyle: "medium" })}

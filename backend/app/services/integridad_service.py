@@ -124,7 +124,7 @@ def notificar_alerta(alerta_id: UUID) -> None:
 
         caso = alerta.caso
         archivo = alerta.archivo
-        destinatarios = {u.email for u in db.query(Usuario).filter(Usuario.rol == RolEnum.admin).all()}
+        destinatarios = {u.email for u in db.query(Usuario).filter(Usuario.rol == RolEnum.admin, Usuario.activo.is_(True)).all()}
         destinatarios.add(caso.usuario.email)
         if settings.ALERTAS_EMAIL_ADMIN:
             destinatarios.add(settings.ALERTAS_EMAIL_ADMIN)
