@@ -35,3 +35,7 @@ class Usuario(Base):
     institucion = Column(String, nullable=True)            # DIRCRI PNP, Medicina Legal, Laboratorio MP...
     registro_profesional = Column(String, nullable=True)   # N° de registro / colegiatura
     telefono = Column(String, nullable=True)
+    
+    # Sprint 6 (historia 25): cuenta pedida desde "Solicitar acceso".
+    #   None → cuenta normal · "pendiente" → espera aprobación del jefe · "rechazada"
+    estado_solicitud = Column(String, nullable=True)

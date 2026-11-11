@@ -5,7 +5,10 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+        # Sprint 6 (historia 25): sesión persistente. Con "Recordarme" el refresh token
+    # dura REFRESH_TOKEN_EXPIRE_DAYS días; sin marcarlo, REFRESH_SIN_RECORDAR_HORAS horas.
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    REFRESH_SIN_RECORDAR_HORAS: int = 12 
 
     # Sprint 2: a partir de este tamaño, el hash se calcula en segundo plano
     # y el archivo responde "procesando" en vez de bloquear la subida.
