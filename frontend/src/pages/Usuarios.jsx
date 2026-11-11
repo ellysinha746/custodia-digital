@@ -28,6 +28,98 @@ const VACIO = {
 };
 const ES_PERITO_ROL = (rol) => rol === "perito" || rol === "perito_parte";
 
+// Sprint 6 (historia 25): solicitud de cuenta pendiente de aprobación.
+function SolicitudPendiente({ u, onListo }) {
+  const [rol, setRol] = useState(u.rol);
+  const [especialidad, setEspecialidad] = useState(u.especialidad || "informatica");
+  const [rechazando, setRechazando] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [ocupado, setOcupado] = useState(false);
+  const { notificar } = useToast();
+
+  const enviar = async (ruta, cuerpo, mensaje) => {
+    setOcupado(true);
+    try {
+      await api.post(`/usuarios/${u.id}/${ruta}`, cuerpo);
+      notificar(mensaje, { tipo: "success" });
+      onListo();
+    } catch (err) {
+      notificar(err.response?.data?.detail || "No se pudo procesar la solicitud.", { tipo: "error" });
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  return (
+    <div className="border-t border-outline-variant/20 px-space-md py-3 flex flex-col gap-space-sm">
+      <div className="flex flex-wrap items-start justify-between gap-space-sm">
+        <div className="min-w-0">
+          <div className="font-body-sm text-body-sm text-on-surface font-semibold">{u.nombre}</div>
+          <div className="font-label-code-sm text-label-code-sm text-outline">{u.email}</div>
+          <div className="font-body-sm text-body-sm text-on-surface-variant">
+            Pide ser {ETIQUETAS_ROL[u.rol]} de {ESPECIALIDADES[u.especialidad] || "—"}
+            {[u.institucion, u.registro_profesional, u.telefono].filter(Boolean).length > 0 &&
+              ` · ${[u.institucion, u.registro_profesional, u.telefono].filter(Boolean).join(" · ")}`}
+          </div>
+          {u.creado_en && (
+            <div className="font-label-code-sm text-label-code-sm text-outline">
+              Solicitada el {new Date(u.creado_en).toLocaleString("es-PE")}
+            </div>
+          )}
+        </div>
+        {!rechazando && (
+          <div className="flex flex-wrap items-center gap-space-sm">
+            <select value={rol} onChange={(e) => setRol(e.target.value)} className={claseInput} aria-label="Rol a asignar">
+              <option value="perito">Perito oficial</option>
+              <option value="perito_parte">Perito de parte</option>
+            </select>
+            <select value={especialidad} onChange={(e) => setEspecialidad(e.target.value)} className={claseInput} aria-label="Especialidad">
+              {Object.entries(ESPECIALIDADES).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+            <button
+              disabled={ocupado}
+              onClick={() => enviar("aprobar", { rol, especialidad }, `Cuenta de ${u.nombre} aprobada.`)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-ui text-label-ui disabled:opacity-60"
+            >
+              <span className="material-symbols-outlined text-base">how_to_reg</span>Aprobar
+            </button>
+            <button
+              disabled={ocupado}
+              onClick={() => setRechazando(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-error/10 text-error font-label-ui text-label-ui hover:bg-error/20 disabled:opacity-60"
+            >
+              <span className="material-symbols-outlined text-base">block</span>Rechazar
+            </button>
+          </div>
+        )}
+      </div>
+      {rechazando && (
+        <div className="flex flex-wrap items-center gap-space-sm">
+          <input
+            autoFocus
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Motivo del rechazo (se envía por correo)"
+            className={`${claseInput} flex-1 min-w-[16rem]`}
+          />
+          <button onClick={() => setRechazando(false)} className="px-3 py-1.5 rounded-lg font-label-ui text-label-ui text-on-surface-variant hover:bg-surface-container">
+            Cancelar
+          </button>
+          <button
+            disabled={ocupado}
+            onClick={() => enviar("rechazar", { motivo }, `Solicitud de ${u.nombre} rechazada.`)}
+            className="px-3 py-1.5 rounded-lg bg-error text-on-error font-label-ui text-label-ui disabled:opacity-60"
+          >
+            Confirmar rechazo
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const claseInput =
   "px-2.5 py-2 rounded-md bg-surface-container-lowest text-on-surface font-body-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-primary/50";
 
@@ -41,6 +133,7 @@ export default function Usuarios() {
   const yo = useUsuario();
   const navigate = useNavigate();
   const { notificar } = useToast();
+  const pendientes = usuarios.filter((u) => u.estado_solicitud === "pendiente");
 
   useEffect(() => {
     let activo = true;
@@ -159,7 +252,21 @@ export default function Usuarios() {
         </form>
       )}
 
-      <div className="bg-surface-container-low rounded-xl overflow-hidden">
+      {/* Sprint 6 (historia 25): solicitudes de cuenta por aprobar */}
+      {pendientes.length > 0 && (
+        <div className="bg-surface-container-low rounded-xl overflow-hidden mb-space-md border border-primary/30">
+          <div className="px-space-md py-3 flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary">person_search</span>
+            <h2 className="font-headline-sm text-headline-sm text-on-surface">Solicitudes pendientes</h2>
+            <span className="px-2 py-0.5 rounded-full bg-primary/15 text-primary font-label-ui text-label-ui">{pendientes.length}</span>
+          </div>
+          {pendientes.map((u) => (
+            <SolicitudPendiente key={u.id} u={u} onListo={() => setRecarga((n) => n + 1)} />
+          ))}
+        </div>
+      )}
+
+      <div className="bg-surface-container-low rounded-xl overflow-x-auto">
         <table className="w-full text-left">
           <thead>
             <tr className="bg-surface-container-lowest">
@@ -171,7 +278,7 @@ export default function Usuarios() {
             </tr>
           </thead>
           <tbody>
-            {usuarios.map((u) => {
+            {usuarios.filter((u) => u.estado_solicitud !== "pendiente").map((u) => {
               const esYo = yo?.id === u.id;
               return (
                 <tr key={u.id} className={`border-t border-outline-variant/20 ${u.activo ? "" : "opacity-60"}`}>
@@ -208,6 +315,11 @@ export default function Usuarios() {
                     {u.casos_a_cargo}
                   </td>
                   <td className="px-space-md py-3">
+                    {u.estado_solicitud === "rechazada" ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-error/10 text-error font-label-ui text-label-ui">
+                        <span className="material-symbols-outlined text-base">block</span>Solicitud rechazada
+                      </span>
+                    ) : (
                     <button
                       disabled={esYo}
                       onClick={() =>
@@ -224,6 +336,7 @@ export default function Usuarios() {
                       <span className="material-symbols-outlined text-base">{u.activo ? "toggle_on" : "toggle_off"}</span>
                       {u.activo ? "Activo" : "Desactivado"}
                     </button>
+                    )}
                   </td>
                 </tr>
               );
