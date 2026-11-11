@@ -3,9 +3,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, casos, archivos, auditoria, busqueda, alertas, fichas, observadas, reportes, metricas, usuarios, peritos, pericias
+from app.api import auth, casos, archivos, auditoria, busqueda, alertas, fichas, observadas, reportes, metricas, usuarios, peritos, pericias, recordatorios
 from app.core.config import settings
 from app.services.integridad_service import escanear_todos, notificar_alerta
+from app.services.recordatorio_service import enviar_recordatorios
 
 
 async def _bucle_escaneo_integridad():
@@ -22,11 +23,28 @@ async def _bucle_escaneo_integridad():
             print(f"[escaneo] Error: {e}", flush=True)
 
 
+async def _bucle_recordatorios():
+    """Sprint 6 (historia 26): revisa los plazos de las pericias cada
+    RECORDATORIOS_CADA_MIN minutos y avisa los que están por vencer."""
+    while True:
+        try:
+            enviados = await asyncio.to_thread(enviar_recordatorios)
+            if enviados:
+                print(f"[recordatorios] {enviados} recordatorio(s) de plazo enviados", flush=True)
+        except Exception as e:
+            print(f"[recordatorios] Error: {e}", flush=True)
+        await asyncio.sleep(settings.RECORDATORIOS_CADA_MIN * 60)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    tarea = asyncio.create_task(_bucle_escaneo_integridad())
+    tareas = [
+        asyncio.create_task(_bucle_escaneo_integridad()),
+        asyncio.create_task(_bucle_recordatorios()),
+    ]
     yield
-    tarea.cancel()
+    for tarea in tareas:
+        tarea.cancel()
 
 
 app = FastAPI(title="Cadena de Custodia - API", lifespan=lifespan)
@@ -52,6 +70,7 @@ app.include_router(metricas.router)
 app.include_router(usuarios.router)
 app.include_router(peritos.router)
 app.include_router(pericias.router)
+app.include_router(recordatorios.router)
 
 @app.get("/")
 def root():

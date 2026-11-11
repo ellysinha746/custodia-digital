@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     SMTP_FROM: str = ""
     SMTP_TLS: bool = True
     ALERTAS_EMAIL_ADMIN: str = ""
+    
+    # Sprint 6 (historia 26): recordatorio de plazos por vencer.
+    RECORDATORIO_DIAS_ANTES: float = 2      # avisar cuando falten estos días o menos
+    RECORDATORIOS_CADA_MIN: float = 60      # cada cuánto se revisan los plazos
 
     class Config:
         env_file = ".env"

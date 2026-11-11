@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Text, Integer, Boolean, ForeignKey, DateTime, func
+from sqlalchemy import Column, String, Text, Integer, Boolean, ForeignKey, DateTime, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from app.db.session import Base
@@ -133,3 +133,24 @@ class EventoPericia(Base):
 
     pericia = relationship("Pericia", back_populates="eventos")
     usuario = relationship("Usuario")
+
+
+
+
+
+class RecordatorioPlazo(Base):
+    """Sprint 6 (historia 26): recordatorio enviado por un plazo por vencer.
+    Uno por pericia, tipo de plazo y fecha de vencimiento: si el plazo cambia
+    (p. ej. tras una subrogación), corresponde un recordatorio nuevo."""
+
+    __tablename__ = "recordatorios_plazo"
+    __table_args__ = (UniqueConstraint("pericia_id", "tipo", "vence_en", name="uq_recordatorio_plazo"),)
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    pericia_id = Column(UUID(as_uuid=True), ForeignKey("pericias.id"), nullable=False, index=True)
+    tipo = Column(String, nullable=False)  # aceptacion | emision | observaciones
+    vence_en = Column(DateTime(timezone=True), nullable=False)
+    destinatarios = Column(JSONB, nullable=True)
+    enviado_en = Column(DateTime(timezone=True), server_default=func.now())
+
+    pericia = relationship("Pericia")
