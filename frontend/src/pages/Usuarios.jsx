@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import { limpiarSesion } from "../sesion";
 import Layout from "../components/Layout";
 import { useToast } from "../components/Toast";
 import { ETIQUETAS_ROL, useUsuario } from "../permisos";
@@ -48,7 +49,7 @@ export default function Usuarios() {
       .then(({ data }) => activo && setUsuarios(data))
       .catch((err) => {
         if (err.response?.status === 401) {
-          localStorage.clear();
+          limpiarSesion();
           navigate("/");
         } else if (activo) {
           setError(err.response?.data?.detail || "No se pudo cargar la lista de usuarios.");

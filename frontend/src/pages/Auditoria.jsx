@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import { limpiarSesion } from "../sesion";
 import Layout from "../components/Layout";
 import ReporteAuditoria from "../components/ReporteAuditoria";
 
@@ -39,7 +40,7 @@ export default function Auditoria() {
       setEventos(data);
     } catch (err) {
       if (err.response?.status === 401) {
-        localStorage.clear();
+        limpiarSesion();
         navigate("/");
       }
     } finally {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import { limpiarSesion } from "../sesion";
 import Layout from "../components/Layout";
 import { useToast } from "../components/Toast";
 import { puede, useUsuario } from "../permisos";
@@ -57,7 +58,7 @@ export default function Casos() {
       setCasos(data);
     } catch (err) {
       if (err.response?.status === 401) {
-        localStorage.clear();
+        limpiarSesion();
         navigate("/");
       }
     } finally {

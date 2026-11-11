@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api";
+import { limpiarSesion } from "../sesion";
 import Layout from "../components/Layout";
 import { useToast } from "../components/Toast";
 import FichaDispositivo, { CamposFicha } from "../components/FichaDispositivo";
@@ -370,7 +371,7 @@ export default function CasoDetalle() {
       setArchivos(datoArchivos);
     } catch (err) {
       if (err.response?.status === 401) {
-        localStorage.clear();
+        limpiarSesion();
         navigate("/");
         return;
       }
@@ -445,7 +446,7 @@ export default function CasoDetalle() {
       }
     } catch (err) {
       if (err.response?.status === 401) {
-        localStorage.clear();
+        limpiarSesion();
         navigate("/");
         return;
       }

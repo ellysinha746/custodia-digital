@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api";
+import { limpiarSesion } from "../sesion";
 import Layout from "../components/Layout";
 
 // Sprint 5 (historia 19.9): perfil del perito — su carga de trabajo.
@@ -52,7 +53,7 @@ export default function PerfilPerito() {
       .then(({ data }) => activo && setPerfil(data))
       .catch((err) => {
         if (err.response?.status === 401) {
-          localStorage.clear();
+          limpiarSesion();
           navigate("/");
         } else if (activo) setError(err.response?.data?.detail || "No se pudo cargar el perfil.");
       });
