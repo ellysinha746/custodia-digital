@@ -108,7 +108,8 @@ def padron_de_peritos(
 ):
     """Historia 19.2: padrón de peritos oficiales y de parte, con filtros."""
     exigir(usuario_actual, "ver_padron")
-    query = db.query(Usuario).filter(Usuario.rol.in_(ROLES_PERITO))
+        # Sprint 6 (historia 25): las solicitudes de cuenta pendientes o rechazadas no son parte del padrón.
+    query = db.query(Usuario).filter(Usuario.rol.in_(ROLES_PERITO), Usuario.estado_solicitud.is_(None))
     if tipo:
         query = query.filter(Usuario.rol == RolEnum(tipo))
     if especialidad:
