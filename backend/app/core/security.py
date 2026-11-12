@@ -18,6 +18,20 @@ def hash_password(password: str) -> str:
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
+# Sprint 6 (historia 27): política de contraseñas.
+MIN_LARGO_PASSWORD = 10
+
+
+def validar_password(password: str) -> None:
+    """Exige mínimo 10 caracteres, con al menos una letra y un número."""
+    if len(password) < MIN_LARGO_PASSWORD:
+        raise HTTPException(
+            status_code=400,
+            detail=f"La contraseña debe tener al menos {MIN_LARGO_PASSWORD} caracteres.",
+        )
+    if not any(c.isalpha() for c in password) or not any(c.isdigit() for c in password):
+        raise HTTPException(status_code=400, detail="La contraseña debe combinar letras y números.")
+
 def crear_token(data: dict, expires_delta: timedelta) -> str:
     to_encode = data.copy()
     to_encode.update({"exp": datetime.utcnow() + expires_delta})

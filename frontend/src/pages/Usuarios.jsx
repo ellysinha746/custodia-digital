@@ -216,7 +216,7 @@ export default function Usuarios() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-space-sm">
             <input required placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className={claseInput} />
             <input required type="email" placeholder="Correo" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={claseInput} />
-            <input required type="password" minLength={8} placeholder="Contraseña (8+ caracteres)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={claseInput} />
+            <input required type="password" minLength={10} placeholder="Contraseña (10+, letras y números)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={claseInput} />
             {/* Sprint 5: solo los peritos tienen especialidad; el fiscal y el jefe, no */}
             {ES_PERITO_ROL(form.rol) ? (
               <select value={form.especialidad} onChange={(e) => setForm({ ...form, especialidad: e.target.value })} className={claseInput}>

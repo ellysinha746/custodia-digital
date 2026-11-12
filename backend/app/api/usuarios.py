@@ -8,7 +8,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.core.security import hash_password
+from app.core.security import hash_password, validar_password
 from app.core.permisos import requiere, ETIQUETAS_ROL
 from app.models.caso import Caso
 from app.models.usuario import Usuario, RolEnum, EspecialidadEnum
@@ -122,8 +122,7 @@ def crear_usuario(
 ):
     if db.query(Usuario).filter(Usuario.email == payload.email).first():
         raise HTTPException(status_code=409, detail="El email ya está registrado.")
-    if len(payload.password) < 8:
-        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres.")
+        validar_password(payload.password)  # Sprint 6 (historia 27)
     especialidad = _especialidad_segun_rol(payload.rol, payload.especialidad)
     nuevo = Usuario(
         nombre=payload.nombre.strip(),

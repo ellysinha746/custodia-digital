@@ -6,7 +6,7 @@ from app.db.session import get_db
 from app.schemas.usuario import UsuarioCreate, UsuarioOut, LoginRequest, TokenResponse, RefreshRequest
 from app.models.usuario import Usuario, RolEnum
 from app.services.correo_service import enviar_correo
-from app.core.security import hash_password, verify_password, crear_access_token, crear_refresh_token, get_current_user
+from app.core.security import hash_password, verify_password, validar_password, crear_access_token, crear_refresh_token, get_current_user
 from app.core.config import settings
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -44,8 +44,11 @@ def registro(payload: UsuarioCreate, background_tasks: BackgroundTasks, db: Sess
     existe = db.query(Usuario).filter(Usuario.email == payload.email).first()
     if existe:
         raise HTTPException(status_code=409, detail="El email ya está registrado.")
-    if len(payload.password) < 8:
-        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres.")
+        validar_password(payload.password)# Sprint 6 (historia 27)
+    if not (payload.institucion or "").strip():
+        raise HTTPException(status_code=400, detail="Indica tu institución (si eres perito particular, escríbelo así).")
+    if not (payload.registro_profesional or "").strip():
+        raise HTTPException(status_code=400, detail="Indica tu N° de registro o colegiatura.")
     if not payload.nombre.strip():
         raise HTTPException(status_code=400, detail="Escribe tu nombre completo.")
 
