@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import { limpiarSesion } from "../sesion";
 import Layout from "../components/Layout";
 import { useToast } from "../components/Toast";
 
@@ -23,7 +24,7 @@ export default function Papelera() {
       setCasos(data);
     } catch (err) {
       if (err.response?.status === 401) {
-        localStorage.clear();
+        limpiarSesion();
         navigate("/");
       }
     } finally {

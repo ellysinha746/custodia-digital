@@ -22,7 +22,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     # El fiscal y el jefe de laboratorio no tienen especialidad: solo los peritos.
     op.alter_column('usuarios', 'especialidad', nullable=True)
-    op.execute("UPDATE usuarios SET especialidad = NULL WHERE rol IN ('fiscal', 'admin')")
+    op.execute("UPDATE usuarios SET especialidad = NULL WHERE rol::text IN ('fiscal', 'admin')")
 
     # Un caso puede abarcar varias especialidades (p. ej. telefonía + audio + video).
     op.add_column(

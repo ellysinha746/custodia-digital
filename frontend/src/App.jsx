@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
+import SolicitarCuenta from "./pages/SolicitarCuenta";
 import Casos from "./pages/Casos";
 import CasoDetalle from "./pages/CasoDetalle";
 import Auditoria from "./pages/Auditoria";
@@ -14,6 +15,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
+      <Route path="/solicitar" element={<SolicitarCuenta />} />
       <Route path="/casos" element={<Casos />} />
       <Route path="/casos/:id" element={<CasoDetalle />} />
       <Route path="/auditoria" element={<Auditoria />} />

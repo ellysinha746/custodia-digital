@@ -13,10 +13,11 @@ from app.models.usuario import Usuario, RolEnum
 from app.models.alerta import Alerta
 from app.services.hashing_service import calcular_sha256
 from app.services.correo_service import enviar_correo
+from app.services.storage_service import existe
 
 
 def _hash_o_none(ruta: str) -> Optional[str]:
-    return calcular_sha256(ruta) if os.path.exists(ruta) else None
+    return calcular_sha256(ruta) if existe(ruta) else None
 
 
 def revisar_archivo(

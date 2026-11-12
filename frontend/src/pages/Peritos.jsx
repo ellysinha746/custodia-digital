@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import { limpiarSesion } from "../sesion";
 import Layout from "../components/Layout";
 
 // Sprint 5 (historia 19.2): padrón de peritos oficiales y de parte.
@@ -36,7 +37,7 @@ export default function Peritos() {
         .then(({ data }) => activo && setPeritos(data))
         .catch((err) => {
           if (err.response?.status === 401) {
-            localStorage.clear();
+            limpiarSesion();
             navigate("/");
           } else if (activo) setError(err.response?.data?.detail || "No se pudo cargar el padrón.");
         });

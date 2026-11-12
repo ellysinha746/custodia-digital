@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import { limpiarSesion } from "../sesion";
 import Layout from "../components/Layout";
+import RecordatoriosPlazo from "../components/RecordatoriosPlazo";
 
 // Sprint 4 (historia 18): dashboard de métricas del administrador.
 
@@ -137,7 +139,7 @@ export default function Dashboard() {
       .then(({ data }) => setM(data))
       .catch((err) => {
         if (err.response?.status === 401) {
-          localStorage.clear();
+          limpiarSesion();
           navigate("/");
         } else {
           setError(err.response?.data?.detail || "No se pudieron cargar las métricas.");
@@ -225,6 +227,8 @@ export default function Dashboard() {
               }))}
             />
           </div>
+          
+          <RecordatoriosPlazo />
         </div>
       )}
     </Layout>

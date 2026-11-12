@@ -18,6 +18,7 @@ class ArchivoOut(BaseModel):
     subido_en: datetime
     ficha_dispositivo: Optional[Dict[str, Any]] = None
     ficha_registrada_en: Optional[datetime] = None
+    metadatos_tecnicos: Optional[Dict[str, Any]] = None  # Sprint 6 (historia 20)
 
     class Config:
         from_attributes = True

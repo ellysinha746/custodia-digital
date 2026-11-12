@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ from app.core.security import hash_password
 from app.core.permisos import requiere, ETIQUETAS_ROL
 from app.models.caso import Caso
 from app.models.usuario import Usuario, RolEnum, EspecialidadEnum
+from app.services.correo_service import enviar_correo
 
 # Sprint 5 (historia 19.1): gestión de usuarios y roles (solo jefe de laboratorio).
 router = APIRouter(prefix="/usuarios", tags=["usuarios y roles"])
@@ -30,6 +31,7 @@ class UsuarioAdminOut(BaseModel):
     institucion: Optional[str] = None
     registro_profesional: Optional[str] = None
     telefono: Optional[str] = None
+    estado_solicitud: Optional[str] = None  # Sprint 6 (historia 25)
 
 
 class UsuarioNuevo(BaseModel):
@@ -72,6 +74,7 @@ def _a_salida(u: Usuario, casos: int) -> UsuarioAdminOut:
         institucion=u.institucion,
         registro_profesional=u.registro_profesional,
         telefono=u.telefono,
+        estado_solicitud=u.estado_solicitud,
     )
 
 
@@ -165,6 +168,8 @@ def actualizar_usuario(
     # Un perito siempre tiene especialidad; el fiscal y el jefe, ninguna.
     usuario.especialidad = _especialidad_segun_rol(usuario.rol, payload.especialidad or usuario.especialidad)
     if payload.activo is not None:
+        if usuario.estado_solicitud and payload.activo:
+            raise HTTPException(status_code=400, detail="Esta cuenta es una solicitud: usa Aprobar para habilitarla.")
         usuario.activo = payload.activo
     for campo in ("institucion", "registro_profesional", "telefono"):
         valor = getattr(payload, campo)
@@ -181,3 +186,78 @@ def actualizar_usuario(
     db.commit()
     db.refresh(usuario)
     return _a_salida(usuario, _casos_por_usuario(db).get(usuario.id, 0))
+
+
+
+
+# ---------------------------------------------------------------------------
+# Sprint 6 (historia 25): solicitudes de cuenta con aprobación del jefe.
+
+class Aprobacion(BaseModel):
+    rol: RolEnum = RolEnum.perito
+    especialidad: Optional[EspecialidadEnum] = None
+
+
+class Rechazo(BaseModel):
+    motivo: Optional[str] = None
+
+
+def _solicitud(db: Session, usuario_id: UUID) -> Usuario:
+    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+    if usuario.estado_solicitud != "pendiente":
+        raise HTTPException(status_code=409, detail="Esta cuenta no tiene una solicitud pendiente.")
+    return usuario
+
+
+@router.post("/{usuario_id}/aprobar", response_model=UsuarioAdminOut)
+def aprobar_solicitud(
+    usuario_id: UUID,
+    payload: Aprobacion,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(requiere("gestionar_usuarios")),
+):
+    """El jefe de laboratorio revisa la solicitud, confirma el rol y la habilita."""
+    usuario = _solicitud(db, usuario_id)
+    usuario.rol = payload.rol
+    usuario.especialidad = _especialidad_segun_rol(payload.rol, payload.especialidad or usuario.especialidad)
+    usuario.activo = True
+    usuario.estado_solicitud = None
+    db.commit()
+    db.refresh(usuario)
+    background_tasks.add_task(
+        enviar_correo,
+        [usuario.email],
+        "[CustodiaDigital] Tu cuenta fue aprobada",
+        f"Hola {usuario.nombre}:\n\nEl jefe de laboratorio aprobó tu cuenta como "
+        f"{ETIQUETAS_ROL.get(usuario.rol, usuario.rol.value)}. Ya puedes iniciar sesión en CustodiaDigital.",
+    )
+    return _a_salida(usuario, 0)
+
+
+@router.post("/{usuario_id}/rechazar", response_model=UsuarioAdminOut)
+def rechazar_solicitud(
+    usuario_id: UUID,
+    payload: Rechazo,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(requiere("gestionar_usuarios")),
+):
+    """La solicitud rechazada no se borra: queda registrada, sin acceso."""
+    usuario = _solicitud(db, usuario_id)
+    usuario.activo = False
+    usuario.estado_solicitud = "rechazada"
+    db.commit()
+    db.refresh(usuario)
+    motivo = (payload.motivo or "").strip()
+    background_tasks.add_task(
+        enviar_correo,
+        [usuario.email],
+        "[CustodiaDigital] Tu solicitud de cuenta fue rechazada",
+        f"Hola {usuario.nombre}:\n\nEl jefe de laboratorio rechazó tu solicitud de cuenta."
+        + (f"\n\nMotivo: {motivo}" if motivo else "")
+        + "\n\nSi crees que es un error, comunícate con el laboratorio.",
+    )
+    return _a_salida(usuario, 0)

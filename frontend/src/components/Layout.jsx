@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import api from "../api";
+import { limpiarSesion } from "../sesion";
 import { useToast } from "./Toast";
 import { ES_PERITO, ETIQUETAS_ROL, olvidarUsuario, puede } from "../permisos";
 
@@ -163,14 +164,14 @@ export default function Layout({ children }) {
       .then(({ data }) => setUsuario(data))
       .catch((err) => {
         if (err.response?.status === 401) {
-          localStorage.clear();
+          limpiarSesion();
           navigate("/");
         }
       });
   }, [navigate, pedirPermisoNotificacion]);
 
   const cerrarSesion = () => {
-    localStorage.clear();
+    limpiarSesion();
     olvidarUsuario();
     navigate("/");
   };

@@ -5,7 +5,10 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+        # Sprint 6 (historia 25): sesión persistente. Con "Recordarme" el refresh token
+    # dura REFRESH_TOKEN_EXPIRE_DAYS días; sin marcarlo, REFRESH_SIN_RECORDAR_HORAS horas.
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    REFRESH_SIN_RECORDAR_HORAS: int = 12 
 
     # Sprint 2: a partir de este tamaño, el hash se calcula en segundo plano
     # y el archivo responde "procesando" en vez de bloquear la subida.
@@ -27,6 +30,20 @@ class Settings(BaseSettings):
     SMTP_FROM: str = ""
     SMTP_TLS: bool = True
     ALERTAS_EMAIL_ADMIN: str = ""
+    
+    # Sprint 6 (historia 26): recordatorio de plazos por vencer.
+    RECORDATORIO_DIAS_ANTES: float = 2      # avisar cuando falten estos días o menos
+    RECORDATORIOS_CADA_MIN: float = 60      # cada cuánto se revisan los plazos
+    
+    # Sprint 6 (historia 22): dónde se guarda la evidencia.
+    #   local → carpeta backend/storage (como hasta el Sprint 5)
+    #   s3    → bucket S3 o MinIO (los archivos antiguos en disco siguen funcionando)
+    STORAGE_BACKEND: str = "local"
+    S3_ENDPOINT_URL: str = ""               # http://minio:9000 con MinIO; vacío para AWS S3
+    S3_ACCESS_KEY: str = ""
+    S3_SECRET_KEY: str = ""
+    S3_BUCKET: str = "custodia-evidencias"
+    S3_REGION: str = "us-east-1"
 
     class Config:
         env_file = ".env"

@@ -29,11 +29,15 @@ def crear_access_token(usuario_id: str) -> str:
         timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
 
-def crear_refresh_token(usuario_id: str) -> str:
-    return crear_token(
-        {"sub": usuario_id, "type": "refresh"},
-        timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+def crear_refresh_token(usuario_id: str, recordarme: bool = False) -> str:
+    """Sprint 6 (historia 25): con "Recordarme" la sesión dura REFRESH_TOKEN_EXPIRE_DAYS
+    días; sin marcarlo, solo REFRESH_SIN_RECORDAR_HORAS horas."""
+    duracion = (
+        timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        if recordarme
+        else timedelta(hours=settings.REFRESH_SIN_RECORDAR_HORAS)
     )
+    return crear_token({"sub": usuario_id, "type": "refresh", "rec": recordarme}, duracion)
 
 def get_current_user(
     token: str = Depends(oauth2_scheme),

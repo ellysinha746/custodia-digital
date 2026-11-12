@@ -29,6 +29,9 @@ class Archivo(Base):
     ficha_dispositivo = Column(JSONB, nullable=True)
     ficha_registrada_en = Column(DateTime(timezone=True), nullable=True)
     
+    # Sprint 6 (historia 20): metadatos extraídos automáticamente al subir
+    # (tipo real del archivo, EXIF, ffprobe, PDF). Aparte de `metadatos`, que edita el perito.
+    metadatos_tecnicos = Column(JSONB, nullable=True)
     estado_procesamiento = Column(
         Enum(EstadoProcesamientoEnum),
         nullable=False,
