@@ -6,6 +6,7 @@ import Layout from "../components/Layout";
 import { useToast } from "../components/Toast";
 import FichaDispositivo, { CamposFicha } from "../components/FichaDispositivo";
 import VersionesObservadas from "../components/VersionesObservadas";
+import MetadatosTecnicos from "../components/MetadatosTecnicos";
 import { puede, useUsuario } from "../permisos";
 import Pericias from "../components/Pericias";
 
@@ -170,6 +171,16 @@ function FilaArchivo({ archivo, caso, onCambio }) {
         </span>
         <span className="material-symbols-outlined text-primary">description</span>
         <span className="flex-1 font-body-md text-body-md text-on-surface truncate">{archivo.nombre_original}</span>
+        {/* Sprint 6 (historia 20): extensión que no coincide con el contenido real */}
+        {archivo.metadatos_tecnicos?.extension_coincide === false && (
+          <span
+            className="inline-flex items-center gap-1 font-label-ui text-label-ui text-error"
+            title="La extensión no coincide con el contenido real del archivo"
+          >
+            <span className="material-symbols-outlined text-base">warning</span>
+            <span className="hidden sm:inline">Extensión falsa</span>
+          </span>
+        )}
         {badgeProcesamiento(archivo.estado_procesamiento)}
         <span className="font-label-code-sm text-label-code-sm text-outline hidden sm:block">
           {archivo.hash_actual ? `${archivo.hash_actual.slice(0, 10)}…` : "—"}
@@ -281,6 +292,13 @@ function FilaArchivo({ archivo, caso, onCambio }) {
                   <p className="font-body-sm text-body-sm text-outline">Sin metadatos registrados.</p>
                 )}
               </div>
+
+              <MetadatosTecnicos
+                archivo={archivo}
+                puedeExtraer={puede(usuario, "editar_metadatos")}
+                onCambio={onCambio}
+                onHistorial={cargarHistorial}
+              />
 
               <FichaDispositivo
                 archivo={archivo}
