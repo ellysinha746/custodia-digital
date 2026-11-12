@@ -1,3 +1,7 @@
+import threading
+from datetime import datetime, timedelta, timezone
+from math import ceil
+from zoneinfo import ZoneInfo
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
@@ -37,6 +41,60 @@ def _verificar_estado_cuenta(usuario: Usuario) -> None:
         raise HTTPException(status_code=403, detail="Tu usuario está desactivado. Contacta al jefe de laboratorio.")
 
 
+
+# ---------------------------------------------------------------------------
+# Sprint 6 (historia 27): bloqueo temporal tras varios intentos fallidos.
+
+def _comprobar_bloqueo(usuario) -> None:
+    if usuario and usuario.bloqueado_hasta and usuario.bloqueado_hasta > datetime.now(timezone.utc):
+        minutos = ceil((usuario.bloqueado_hasta - datetime.now(timezone.utc)).total_seconds() / 60)
+        raise HTTPException(
+            status_code=429,
+            detail=f"Cuenta bloqueada temporalmente por {settings.MAX_INTENTOS_LOGIN} intentos fallidos. "
+                   f"Intenta de nuevo en {minutos} minuto(s) o pide al jefe de laboratorio que la desbloquee.",
+        )
+
+
+def _registrar_fallo(db: Session, usuario: Usuario) -> None:
+    usuario.intentos_fallidos = (usuario.intentos_fallidos or 0) + 1
+    if usuario.intentos_fallidos >= settings.MAX_INTENTOS_LOGIN:
+        usuario.bloqueado_hasta = datetime.now(timezone.utc) + timedelta(minutes=settings.BLOQUEO_LOGIN_MIN)
+        usuario.intentos_fallidos = 0
+        hasta = usuario.bloqueado_hasta.astimezone(ZoneInfo("America/Lima")).strftime("%d/%m/%Y %H:%M")
+        print(f"[seguridad] Cuenta {usuario.email} bloqueada hasta {hasta} por intentos fallidos", flush=True)
+        admins = [u.email for u in db.query(Usuario).filter(Usuario.rol == RolEnum.admin, Usuario.activo.is_(True)).all()]
+        # El correo va en un hilo aparte: la respuesta de error no espera al servidor de correo.
+        threading.Thread(
+            target=enviar_correo,
+            args=(
+                sorted(set(admins + [usuario.email])),
+                "[CustodiaDigital] Cuenta bloqueada por intentos fallidos",
+                f"La cuenta de {usuario.nombre} ({usuario.email}) se bloqueó tras "
+                f"{settings.MAX_INTENTOS_LOGIN} intentos fallidos de inicio de sesión.\n"
+                f"Queda bloqueada hasta las {hasta} (hora de Lima).\n\n"
+                "Si no fuiste tú, avisa al jefe de laboratorio.",
+            ),
+            daemon=True,
+        ).start()
+    db.commit()
+
+
+def _autenticar(db: Session, usuario, password: str, recordarme: bool) -> TokenResponse:
+    """Login común para la página y para Swagger (/token)."""
+    _comprobar_bloqueo(usuario)
+    if not usuario or not verify_password(password, usuario.password_hash):
+        if usuario:
+            _registrar_fallo(db, usuario)
+        raise HTTPException(status_code=401, detail="Email o contraseña incorrectos.")
+    _verificar_estado_cuenta(usuario)
+    if usuario.intentos_fallidos or usuario.bloqueado_hasta:
+        usuario.intentos_fallidos = 0
+        usuario.bloqueado_hasta = None
+        db.commit()
+    return TokenResponse(
+        access_token=crear_access_token(str(usuario.id)),
+        refresh_token=crear_refresh_token(str(usuario.id), recordarme),
+    )
 @router.post("/registro", response_model=UsuarioOut, status_code=status.HTTP_201_CREATED)
 def registro(payload: UsuarioCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Sprint 6 (historia 25): cualquiera puede SOLICITAR una cuenta de perito, pero
@@ -80,14 +138,7 @@ def registro(payload: UsuarioCreate, background_tasks: BackgroundTasks, db: Sess
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     usuario = db.query(Usuario).filter(Usuario.email == payload.email).first()
-    if not usuario or not verify_password(payload.password, usuario.password_hash):
-        raise HTTPException(status_code=401, detail="Email o contraseña incorrectos.")
-    _verificar_estado_cuenta(usuario)
-
-    return TokenResponse(
-        access_token=crear_access_token(str(usuario.id)),
-        refresh_token=crear_refresh_token(str(usuario.id), payload.recordarme),
-    )
+    return _autenticar(db, usuario, payload.password, payload.recordarme)
 
 @router.post("/refresh", response_model=TokenResponse)
 def refresh(payload: RefreshRequest, db: Session = Depends(get_db)):
@@ -115,14 +166,7 @@ def login_swagger(
     db: Session = Depends(get_db),
 ):
     usuario = db.query(Usuario).filter(Usuario.email == form.username).first()
-    if not usuario or not verify_password(form.password, usuario.password_hash):
-        raise HTTPException(status_code=401, detail="Email o contraseña incorrectos.")
-    _verificar_estado_cuenta(usuario)
-
-    return TokenResponse(
-        access_token=crear_access_token(str(usuario.id)),
-        refresh_token=crear_refresh_token(str(usuario.id)),
-    )
+    return _autenticar(db, usuario, form.password, False)
 
 @router.get("/me", response_model=UsuarioOut)
 def me(usuario_actual=Depends(get_current_user)):

@@ -1,6 +1,6 @@
 import uuid
 import enum
-from sqlalchemy import Column, String, Enum, DateTime, Boolean, func
+from sqlalchemy import Column, String, Boolean, Integer, DateTime, Enum, func
 from sqlalchemy.dialects.postgresql import UUID
 from app.db.session import Base
 
@@ -39,3 +39,7 @@ class Usuario(Base):
     # Sprint 6 (historia 25): cuenta pedida desde "Solicitar acceso".
     #   None → cuenta normal · "pendiente" → espera aprobación del jefe · "rechazada"
     estado_solicitud = Column(String, nullable=True)
+    
+    # Sprint 6 (historia 27): bloqueo temporal tras varios intentos fallidos de login.
+    intentos_fallidos = Column(Integer, nullable=False, default=0, server_default="0")
+    bloqueado_hasta = Column(DateTime(timezone=True), nullable=True)
