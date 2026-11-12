@@ -6,6 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from app.db.session import get_db
 from app.core.security import hash_password, validar_password
@@ -32,6 +33,7 @@ class UsuarioAdminOut(BaseModel):
     registro_profesional: Optional[str] = None
     telefono: Optional[str] = None
     estado_solicitud: Optional[str] = None  # Sprint 6 (historia 25)
+    bloqueado_hasta: Optional[datetime] = None  # Sprint 6 (historia 27)
 
 
 class UsuarioNuevo(BaseModel):
@@ -75,6 +77,7 @@ def _a_salida(u: Usuario, casos: int) -> UsuarioAdminOut:
         registro_profesional=u.registro_profesional,
         telefono=u.telefono,
         estado_solicitud=u.estado_solicitud,
+        bloqueado_hasta=u.bloqueado_hasta,
     )
 
 
@@ -259,4 +262,22 @@ def rechazar_solicitud(
         + (f"\n\nMotivo: {motivo}" if motivo else "")
         + "\n\nSi crees que es un error, comunícate con el laboratorio.",
     )
+    return _a_salida(usuario, 0)
+
+
+# Sprint 6 (historia 27): el jefe de laboratorio levanta un bloqueo por intentos fallidos.
+@router.post("/{usuario_id}/desbloquear", response_model=UsuarioAdminOut)
+def desbloquear_usuario(
+    usuario_id: UUID,
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(requiere("gestionar_usuarios")),
+):
+    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+    usuario.bloqueado_hasta = None
+    usuario.intentos_fallidos = 0
+    db.commit()
+    db.refresh(usuario)
+    print(f"[seguridad] {usuario_actual.email} desbloqueó la cuenta {usuario.email}", flush=True)
     return _a_salida(usuario, 0)

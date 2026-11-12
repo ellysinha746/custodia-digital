@@ -163,6 +163,17 @@ export default function Usuarios() {
       setRecarga((n) => n + 1);
     }
   };
+  
+  // Sprint 6 (historia 27): levantar un bloqueo por intentos fallidos.
+  const desbloquear = async (u) => {
+    try {
+      await api.post(`/usuarios/${u.id}/desbloquear`);
+      notificar(`${u.nombre} fue desbloqueado.`, { tipo: "success" });
+    } catch (err) {
+      notificar(err.response?.data?.detail || "No se pudo desbloquear.", { tipo: "error" });
+    }
+    setRecarga((n) => n + 1);
+  };
 
   const crear = async (e) => {
     e.preventDefault();
@@ -336,6 +347,17 @@ export default function Usuarios() {
                       <span className="material-symbols-outlined text-base">{u.activo ? "toggle_on" : "toggle_off"}</span>
                       {u.activo ? "Activo" : "Desactivado"}
                     </button>
+                    )}
+                    {u.bloqueado_hasta && new Date(u.bloqueado_hasta) > new Date() && (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1 font-label-ui text-label-ui text-error">
+                          <span className="material-symbols-outlined text-base">lock_clock</span>
+                          Bloqueado hasta {new Date(u.bloqueado_hasta).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <button onClick={() => desbloquear(u)} className="font-label-ui text-label-ui text-primary hover:underline">
+                          Desbloquear
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>

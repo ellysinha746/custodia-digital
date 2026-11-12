@@ -33,7 +33,9 @@ export default function Login() {
       navigate("/casos");
     } catch (err) {
       // Sprint 5/6: cuenta desactivada, pendiente o rechazada → 403 con su propio mensaje
-      setError(err.response?.status === 403 ? err.response.data.detail : "Email o contraseña incorrectos.");
+            // 403: cuenta desactivada/pendiente/rechazada · 429: bloqueada por intentos fallidos (H27)
+      const conMensaje = [403, 429].includes(err.response?.status);
+      setError(conMensaje ? err.response.data.detail : "Email o contraseña incorrectos.");
     } finally {
       setEntrando(false);
     }
