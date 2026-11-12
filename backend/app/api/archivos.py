@@ -1,4 +1,6 @@
 import os
+import shutil
+import tempfile
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, status
 from fastapi.responses import FileResponse
@@ -20,6 +22,7 @@ from app.core.config import settings
 from app.core.security import get_current_user
 from app.core.permisos import puede_ver_caso, exigir
 from app.services.storage_service import guardar_archivo
+from app.services.metadatos_service import extraer_metadatos
 from app.services.hashing_service import calcular_sha256
 from app.services.integridad_service import revisar_archivo, notificar_alerta
 from app.services.ficha_service import normalizar_ficha
@@ -111,10 +114,18 @@ def subir_archivo(
         "ficha_dispositivo": ficha or None,
         "ficha_registrada_en": datetime.now(timezone.utc) if ficha else None,
     }
-    ruta_original, ruta_copia = guardar_archivo(
-        str(caso_id), archivo.filename, archivo.file
-    )
-    tamano_mb = os.path.getsize(ruta_copia) / (1024 * 1024)
+    # Sprint 6 (historia 20): el archivo se recibe primero en un temporal para
+    # extraer sus metadatos técnicos y luego va al almacenamiento.
+    with tempfile.NamedTemporaryFile(prefix="subida_", delete=False) as tmp:
+        shutil.copyfileobj(archivo.file, tmp)
+        ruta_tmp = tmp.name
+    try:
+        metadatos_tecnicos = extraer_metadatos(ruta_tmp, archivo.filename)
+        with open(ruta_tmp, "rb") as origen:
+            ruta_original, ruta_copia = guardar_archivo(str(caso_id), archivo.filename, origen)
+    finally:
+        os.remove(ruta_tmp)
+    tamano_mb = metadatos_tecnicos["tamano_bytes"] / (1024 * 1024)
     es_pesado = tamano_mb >= settings.UMBRAL_ARCHIVO_PESADO_MB
 
     if es_pesado:
@@ -127,6 +138,7 @@ def subir_archivo(
             hash_actual=None,
             estado_procesamiento=EstadoProcesamientoEnum.procesando,
             metadatos={"content_type": archivo.content_type},
+            metadatos_tecnicos=metadatos_tecnicos,
             **datos_ficha,
         )
         db.add(nuevo)
@@ -145,6 +157,7 @@ def subir_archivo(
         hash_actual=hash_copia,
         estado_procesamiento=EstadoProcesamientoEnum.listo,
         metadatos={"content_type": archivo.content_type},
+        metadatos_tecnicos=metadatos_tecnicos,
         **datos_ficha,
     )
     db.add(nuevo)
@@ -315,6 +328,33 @@ def actualizar_metadatos(
     metadatos_actuales = dict(archivo.metadatos or {})
     metadatos_actuales.update(payload.metadatos)
     archivo.metadatos = metadatos_actuales
+    db.commit()
+    db.refresh(archivo)
+    return archivo
+
+
+@router.post("/archivos/{archivo_id}/metadatos-tecnicos", response_model=ArchivoOut)
+def reextraer_metadatos(
+    archivo_id: UUID,
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(get_current_user),
+):
+    """Sprint 6 (historia 20): vuelve a extraer los metadatos técnicos leyendo el
+    ORIGINAL (solo lectura). Sirve para evidencia subida antes del Sprint 6."""
+    exigir(usuario_actual, "editar_metadatos")
+    archivo = _obtener_archivo(db, archivo_id, usuario_actual)
+    if not os.path.exists(archivo.ruta_original):
+        raise HTTPException(status_code=404, detail="El original ya no está en el almacenamiento.")
+
+    archivo.metadatos_tecnicos = extraer_metadatos(archivo.ruta_original, archivo.nombre_original)
+    db.add(
+        LogCustodia(
+            archivo_id=archivo.id,
+            usuario_id=usuario_actual.id,
+            accion=AccionEnum.acceso,
+            resultado="metadatos técnicos re-extraídos",
+        )
+    )
     db.commit()
     db.refresh(archivo)
     return archivo

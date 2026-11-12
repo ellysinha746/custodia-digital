@@ -1,5 +1,10 @@
 FROM python:3.11-slim
 
+# Sprint 6 (historia 20): ffprobe (parte de ffmpeg) lee los metadatos de audio y video.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY requirements.txt .
