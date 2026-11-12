@@ -22,6 +22,7 @@ from app.core.security import get_current_user
 from app.core.permisos import puede_ver_caso, exigir
 from app.services.storage_service import guardar_archivo, existe, tamano, abrir, respuesta_descarga, descripcion
 from app.services.metadatos_service import extraer_metadatos
+from app.services.validacion_subida import validar_extension, copiar_con_limite, validar_contenido
 from app.services.hashing_service import calcular_sha256
 from app.services.integridad_service import revisar_archivo, notificar_alerta
 from app.services.ficha_service import normalizar_ficha
@@ -116,11 +117,18 @@ def subir_archivo(
     # Sprint 6: el archivo se recibe primero en un temporal para extraer sus
     # metadatos técnicos (historia 20) y luego va al almacenamiento, sea disco o
     # S3/MinIO (historia 22).
+    validar_extension(archivo.filename)  # Sprint 6 (historia 27)
     with tempfile.NamedTemporaryFile(prefix="subida_", delete=False) as tmp:
-        shutil.copyfileobj(archivo.file, tmp)
         ruta_tmp = tmp.name
+        try:
+            copiar_con_limite(archivo.file, tmp)  # Sprint 6 (historia 27)
+        except HTTPException:
+            tmp.close()
+            os.remove(ruta_tmp)
+            raise
     try:
         metadatos_tecnicos = extraer_metadatos(ruta_tmp, archivo.filename)
+        validar_contenido(metadatos_tecnicos)  # Sprint 6 (historia 27)
         with open(ruta_tmp, "rb") as origen:
             ruta_original, ruta_copia = guardar_archivo(str(caso_id), archivo.filename, origen)
     finally:

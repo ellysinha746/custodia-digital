@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     # Sprint 6 (historia 27): bloqueo por intentos fallidos de login.
     MAX_INTENTOS_LOGIN: int = 5
     BLOQUEO_LOGIN_MIN: int = 15
+    
+    # Sprint 6 (historia 27): tamaño máximo de una evidencia subida.
+    MAX_SUBIDA_MB: int = 1024
 
     # Sprint 2: a partir de este tamaño, el hash se calcula en segundo plano
     # y el archivo responde "procesando" en vez de bloquear la subida.
