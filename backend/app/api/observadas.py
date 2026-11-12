@@ -17,7 +17,7 @@ from app.api.archivos import _obtener_archivo, _obtener_caso_editable
 from app.models.version_observada import VersionObservada
 from app.models.log_custodia import LogCustodia, AccionEnum
 from app.services.hashing_service import calcular_sha256
-from app.services.storage_service import STORAGE_DIR
+from app.services.storage_service import guardar_stream, existe, respuesta_descarga
 
 router = APIRouter(tags=["versiones observadas"])
 
@@ -64,12 +64,8 @@ def subir_version_observada(
     if not observaciones.strip():
         raise HTTPException(status_code=400, detail="Escribe las observaciones de esta versión.")
 
-    carpeta = os.path.join(STORAGE_DIR, str(evidencia.caso_id), "observadas", str(evidencia.id), uuid.uuid4().hex)
-    os.makedirs(carpeta, exist_ok=True)
-    nombre = os.path.basename(archivo.filename or "observada")
-    ruta = os.path.join(carpeta, nombre)
-    with open(ruta, "wb") as destino:
-        shutil.copyfileobj(archivo.file, destino)
+    nombre = os.path.basename((archivo.filename or "observada").replace("\\", "/")) or "observada"
+    ruta = guardar_stream(f"{evidencia.caso_id}/observadas/{evidencia.id}/{uuid.uuid4().hex}/{nombre}", archivo.file)
 
     version = VersionObservada(
         archivo_id=evidencia.id,
@@ -120,7 +116,7 @@ def descargar_version_observada(
         raise HTTPException(status_code=404, detail="Versión no encontrada.")
     # Hereda la visibilidad del archivo (dueño del caso o admin).
     evidencia = _obtener_archivo(db, version.archivo_id, usuario_actual)
-    if not os.path.exists(version.ruta):
+    if not existe(version.ruta):
         raise HTTPException(status_code=404, detail="La versión ya no está en el almacenamiento.")
 
     db.add(
@@ -132,4 +128,4 @@ def descargar_version_observada(
         )
     )
     db.commit()
-    return FileResponse(version.ruta, filename=f"OBSERVADA_{version.nombre}")
+    return respuesta_descarga(version.ruta, f"OBSERVADA_{version.nombre}")

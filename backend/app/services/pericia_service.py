@@ -11,7 +11,7 @@ from app.models.pericia import Pericia, DesignacionPericia, EventoPericia, ESTAD
 from app.models.usuario import Usuario, RolEnum
 from app.services.correo_service import enviar_correo
 from app.services.hashing_service import calcular_sha256
-from app.services.storage_service import STORAGE_DIR
+from app.services.storage_service import guardar_stream
 
 # Sprint 5 (épica H19): reglas del procedimiento pericial.
 
@@ -100,12 +100,8 @@ def registrar_evento(db: Session, pericia: Pericia, usuario, tipo: str, detalle:
 
 def guardar_documento(pericia: Pericia, subcarpeta: str, archivo) -> tuple:
     """Guarda el informe pericial o un anexo aparte de la evidencia. Devuelve (nombre, ruta, sha256)."""
-    carpeta = os.path.join(STORAGE_DIR, str(pericia.caso_id), "pericias", str(pericia.id), subcarpeta, uuid.uuid4().hex)
-    os.makedirs(carpeta, exist_ok=True)
-    nombre = os.path.basename(archivo.filename or "documento")
-    ruta = os.path.join(carpeta, nombre)
-    with open(ruta, "wb") as destino:
-        shutil.copyfileobj(archivo.file, destino)
+    nombre = os.path.basename((archivo.filename or "documento").replace("\\", "/")) or "documento"
+    ruta = guardar_stream(f"{pericia.caso_id}/pericias/{pericia.id}/{subcarpeta}/{uuid.uuid4().hex}/{nombre}", archivo.file)
     return nombre, ruta, calcular_sha256(ruta)
 
 

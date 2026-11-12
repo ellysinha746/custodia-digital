@@ -12,6 +12,24 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  # Sprint 6 (historia 22): almacenamiento de evidencia compatible con S3.
+  # Consola web: http://localhost:9001 (usuario y clave de abajo).
+    # MinIO retiró sus imágenes de Docker Hub y quay.io (sept. 2026); se usa la
+  # compilación gratuita de Chainguard, que solo publica la etiqueta "latest".
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    user: "0:0"   # la imagen corre como usuario 65532; root para poder escribir en el volumen
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: custodia_minio
+      MINIO_ROOT_PASSWORD: custodia_minio_2026
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+
   api:
     build: ./backend
     restart: always
@@ -19,10 +37,20 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env
+    environment:
+      # Sprint 6 (historia 22): la evidencia nueva se guarda en MinIO.
+      # Para volver al disco local, cambia STORAGE_BACKEND a "local".
+      STORAGE_BACKEND: s3
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: custodia_minio
+      S3_SECRET_KEY: custodia_minio_2026
+      S3_BUCKET: custodia-evidencias
     depends_on:
       - db
+      - minio
     volumes:
       - ./backend:/app
 
 volumes:
   pgdata:
+  miniodata:

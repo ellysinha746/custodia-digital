@@ -6,6 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse, Response
+from app.services import storage_service as almacen
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -342,11 +343,11 @@ def obtener_pericia(pericia_id: UUID, db: Session = Depends(get_db), usuario_act
 @router.get("/pericias/{pericia_id}/informe")
 def descargar_informe(pericia_id: UUID, db: Session = Depends(get_db), usuario_actual=Depends(get_current_user)):
     pericia = _obtener_pericia(db, pericia_id, usuario_actual)
-    if not pericia.informe_ruta or not os.path.exists(pericia.informe_ruta):
+    if not pericia.informe_ruta or not almacen.existe(pericia.informe_ruta):
         raise HTTPException(status_code=404, detail="La pericia aún no tiene informe emitido.")
     reglas.registrar_evento(db, pericia, usuario_actual, "descarga_informe", pericia.informe_nombre)
     db.commit()
-    return FileResponse(pericia.informe_ruta, filename=f"{pericia.codigo}_{pericia.informe_nombre}")
+    return almacen.respuesta_descarga(pericia.informe_ruta, f"{pericia.codigo}_{pericia.informe_nombre}")
 
 
 @router.get("/observaciones-pericia/{observacion_id}/anexo")
@@ -355,9 +356,9 @@ def descargar_anexo(observacion_id: UUID, db: Session = Depends(get_db), usuario
     if not obs or not obs.anexo_ruta:
         raise HTTPException(status_code=404, detail="Anexo no encontrado.")
     _obtener_pericia(db, obs.pericia_id, usuario_actual)
-    if not os.path.exists(obs.anexo_ruta):
+    if not almacen.existe(obs.anexo_ruta):
         raise HTTPException(status_code=404, detail="El anexo ya no está en el almacenamiento.")
-    return FileResponse(obs.anexo_ruta, filename=obs.anexo_nombre)
+    return almacen.respuesta_descarga(obs.anexo_ruta, obs.anexo_nombre)
 
 
 @router.get("/pericias-motivos-subrogacion")
