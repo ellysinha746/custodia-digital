@@ -43,3 +43,8 @@ class Usuario(Base):
     # Sprint 6 (historia 27): bloqueo temporal tras varios intentos fallidos de login.
     intentos_fallidos = Column(Integer, nullable=False, default=0, server_default="0")
     bloqueado_hasta = Column(DateTime(timezone=True), nullable=True)
+
+    # Sprint 6 (historia 24): segundo factor con TOTP (Google Authenticator, Authy...).
+    totp_secreto = Column(String, nullable=True)      # se guarda al empezar a configurarlo
+    totp_activo = Column(Boolean, nullable=False, default=False, server_default="false")
+    totp_ultimo_paso = Column(Integer, nullable=True)  # evita reutilizar el mismo código
