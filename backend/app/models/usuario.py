@@ -1,6 +1,6 @@
 import uuid
 import enum
-from sqlalchemy import Column, String, Enum, DateTime, Boolean, func
+from sqlalchemy import Column, String, Boolean, Integer, DateTime, Enum, func
 from sqlalchemy.dialects.postgresql import UUID
 from app.db.session import Base
 
@@ -39,3 +39,14 @@ class Usuario(Base):
     # Sprint 6 (historia 25): cuenta pedida desde "Solicitar acceso".
     #   None → cuenta normal · "pendiente" → espera aprobación del jefe · "rechazada"
     estado_solicitud = Column(String, nullable=True)
+    
+    # Sprint 6 (historia 27): bloqueo temporal tras varios intentos fallidos de login.
+    intentos_fallidos = Column(Integer, nullable=False, default=0, server_default="0")
+    bloqueado_hasta = Column(DateTime(timezone=True), nullable=True)
+
+    # Sprint 6 (historia 24): segundo factor con TOTP (Google Authenticator, Authy...).
+    totp_secreto = Column(String, nullable=True)      # se guarda al empezar a configurarlo
+    totp_activo = Column(Boolean, nullable=False, default=False, server_default="false")
+    totp_ultimo_paso = Column(Integer, nullable=True)  # evita reutilizar el mismo código
+    # Va dentro de los tokens; al subirla (p. ej. al reiniciar el 2FA) se cierran todas las sesiones abiertas.
+    sesion_version = Column(Integer, nullable=False, default=0, server_default="0")

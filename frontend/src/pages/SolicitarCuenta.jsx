@@ -81,11 +81,11 @@ export default function SolicitarCuenta() {
           <Campo etiqueta="Correo">
             <input required type="email" value={form.email} onChange={cambiar("email")} className={claseCampo} />
           </Campo>
-          <Campo etiqueta="Contraseña" ayuda="Mínimo 8 caracteres.">
-            <input required type="password" minLength={8} autoComplete="new-password" value={form.password} onChange={cambiar("password")} className={claseCampo} />
+          <Campo etiqueta="Contraseña" ayuda="Mínimo 10 caracteres, con letras y números.">
+            <input required type="password" minLength={10} autoComplete="new-password" value={form.password} onChange={cambiar("password")} className={claseCampo} />
           </Campo>
           <Campo etiqueta="Repite la contraseña">
-            <input required type="password" minLength={8} autoComplete="new-password" value={form.confirmar} onChange={cambiar("confirmar")} className={claseCampo} />
+            <input required type="password" minLength={10} autoComplete="new-password" value={form.confirmar} onChange={cambiar("confirmar")} className={claseCampo} />
           </Campo>
           <Campo etiqueta="Tipo de perito">
             <select value={form.rol} onChange={cambiar("rol")} className={claseCampo}>
@@ -101,10 +101,10 @@ export default function SolicitarCuenta() {
             </select>
           </Campo>
           <Campo etiqueta="Institución">
-            <input placeholder="DIRCRI PNP, Medicina Legal, perito particular…" value={form.institucion} onChange={cambiar("institucion")} className={claseCampo} />
+           <input required placeholder="DIRCRI PNP, Medicina Legal, perito particular…" value={form.institucion} onChange={cambiar("institucion")} className={claseCampo} />
           </Campo>
           <Campo etiqueta="N° de registro / colegiatura">
-            <input value={form.registro_profesional} onChange={cambiar("registro_profesional")} className={claseCampo} />
+           <input required value={form.registro_profesional} onChange={cambiar("registro_profesional")} className={claseCampo} />
           </Campo>
           <Campo etiqueta="Teléfono">
             <input value={form.telefono} onChange={cambiar("telefono")} className={claseCampo} />

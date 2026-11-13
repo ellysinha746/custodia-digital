@@ -16,3 +16,5 @@ filetype==1.2.0
 pypdf==5.0.1
 tzdata==2024.2
 boto3==1.35.36
+pyotp==2.9.0
+qrcode==7.4.2

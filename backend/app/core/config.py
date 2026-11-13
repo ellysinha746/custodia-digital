@@ -8,7 +8,19 @@ class Settings(BaseSettings):
         # Sprint 6 (historia 25): sesión persistente. Con "Recordarme" el refresh token
     # dura REFRESH_TOKEN_EXPIRE_DAYS días; sin marcarlo, REFRESH_SIN_RECORDAR_HORAS horas.
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
-    REFRESH_SIN_RECORDAR_HORAS: int = 12 
+    REFRESH_SIN_RECORDAR_HORAS: int = 12
+    
+    # Sprint 6 (historia 27): bloqueo por intentos fallidos de login.
+    MAX_INTENTOS_LOGIN: int = 5
+    BLOQUEO_LOGIN_MIN: int = 15
+    
+    # Sprint 6 (historia 24): verificación en dos pasos (TOTP).
+    TOTP_EMISOR: str = "CustodiaDigital"            # nombre que aparece en la app autenticadora
+    TOTP_ROLES_OBLIGATORIO: str = "admin,fiscal"    # roles que no entran sin 2FA
+    TOKEN_2FA_MIN: int = 10                         # minutos para escribir los códigos tras la contraseña
+
+    # Sprint 6 (historia 27): tamaño máximo de una evidencia subida.
+    MAX_SUBIDA_MB: int = 1024
 
     # Sprint 2: a partir de este tamaño, el hash se calcula en segundo plano
     # y el archivo responde "procesando" en vez de bloquear la subida.

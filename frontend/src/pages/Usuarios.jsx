@@ -27,6 +27,8 @@ const VACIO = {
   institucion: "", registro_profesional: "", telefono: "",
 };
 const ES_PERITO_ROL = (rol) => rol === "perito" || rol === "perito_parte";
+// Sprint 6 (historia 24): roles que no entran sin verificación en dos pasos (TOTP_ROLES_OBLIGATORIO).
+const ROLES_CON_2FA = ["admin", "fiscal"];
 
 // Sprint 6 (historia 25): solicitud de cuenta pendiente de aprobación.
 function SolicitudPendiente({ u, onListo }) {
@@ -163,6 +165,29 @@ export default function Usuarios() {
       setRecarga((n) => n + 1);
     }
   };
+  
+  // Sprint 6 (historia 27): levantar un bloqueo por intentos fallidos.
+  const desbloquear = async (u) => {
+    try {
+      await api.post(`/usuarios/${u.id}/desbloquear`);
+      notificar(`${u.nombre} fue desbloqueado.`, { tipo: "success" });
+    } catch (err) {
+      notificar(err.response?.data?.detail || "No se pudo desbloquear.", { tipo: "error" });
+    }
+    setRecarga((n) => n + 1);
+  };
+
+  // Sprint 6 (historia 24): si alguien perdió el celular, se le reinicia el 2FA y se cierran sus sesiones.
+  const reiniciar2fa = async (u) => {
+    if (!window.confirm(`¿Reiniciar la verificación en dos pasos de ${u.nombre}? Se cerrarán sus sesiones abiertas y tendrá que escanear un QR nuevo.`)) return;
+    try {
+      await api.post(`/usuarios/${u.id}/reiniciar-2fa`);
+      notificar(`Se reinició la verificación en dos pasos de ${u.nombre}.`, { tipo: "success" });
+    } catch (err) {
+      notificar(err.response?.data?.detail || "No se pudo reiniciar la verificación en dos pasos.", { tipo: "error" });
+    }
+    setRecarga((n) => n + 1);
+  };
 
   const crear = async (e) => {
     e.preventDefault();
@@ -175,7 +200,7 @@ export default function Usuarios() {
       setRecarga((n) => n + 1);
     } catch (err) {
       const d = err.response?.data?.detail;
-      notificar(typeof d === "string" ? d : "Revisa los datos del usuario (email válido, contraseña de 8+).", {
+      notificar(typeof d === "string" ? d : "Revisa los datos del usuario (email válido, contraseña de 10+ con letras y números).", {
         tipo: "error",
       });
     } finally {
@@ -216,7 +241,7 @@ export default function Usuarios() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-space-sm">
             <input required placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className={claseInput} />
             <input required type="email" placeholder="Correo" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={claseInput} />
-            <input required type="password" minLength={8} placeholder="Contraseña (8+ caracteres)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={claseInput} />
+            <input required type="password" minLength={10} placeholder="Contraseña (10+, letras y números)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={claseInput} />
             {/* Sprint 5: solo los peritos tienen especialidad; el fiscal y el jefe, no */}
             {ES_PERITO_ROL(form.rol) ? (
               <select value={form.especialidad} onChange={(e) => setForm({ ...form, especialidad: e.target.value })} className={claseInput}>
@@ -270,7 +295,7 @@ export default function Usuarios() {
         <table className="w-full text-left">
           <thead>
             <tr className="bg-surface-container-lowest">
-              {["Usuario", "Especialidad", "Rol", "Casos a cargo", "Estado"].map((h) => (
+              {["Usuario", "Especialidad", "Rol", "Casos a cargo", "Estado", "2FA"].map((h) => (
                 <th key={h} className="px-space-md py-3 font-label-ui text-label-ui text-outline uppercase tracking-wider">
                   {h}
                 </th>
@@ -336,6 +361,43 @@ export default function Usuarios() {
                       <span className="material-symbols-outlined text-base">{u.activo ? "toggle_on" : "toggle_off"}</span>
                       {u.activo ? "Activo" : "Desactivado"}
                     </button>
+                    )}
+                    {u.bloqueado_hasta && new Date(u.bloqueado_hasta) > new Date() && (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1 font-label-ui text-label-ui text-error">
+                          <span className="material-symbols-outlined text-base">lock_clock</span>
+                          Bloqueado hasta {new Date(u.bloqueado_hasta).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <button onClick={() => desbloquear(u)} className="font-label-ui text-label-ui text-primary hover:underline">
+                          Desbloquear
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                  {/* Sprint 6 (historia 24) */}
+                  <td className="px-space-md py-3">
+                    {u.totp_activo ? (
+                      <div className="flex flex-col items-start gap-1">
+                        <span className="inline-flex items-center gap-1 font-label-ui text-label-ui text-tertiary">
+                          <span className="material-symbols-outlined text-base">verified_user</span>
+                          Activa
+                        </span>
+                        {!esYo && (
+                          <button onClick={() => reiniciar2fa(u)} className="font-label-ui text-label-ui text-primary hover:underline">
+                            Reiniciar 2FA
+                          </button>
+                        )}
+                      </div>
+                    ) : ROLES_CON_2FA.includes(u.rol) ? (
+                      <span
+                        className="inline-flex items-center gap-1 font-label-ui text-label-ui text-on-surface-variant"
+                        title="Su rol exige 2FA: la configurará en su próximo ingreso."
+                      >
+                        <span className="material-symbols-outlined text-base">pending</span>
+                        Pendiente
+                      </span>
+                    ) : (
+                      <span className="font-body-sm text-body-sm text-outline">—</span>
                     )}
                   </td>
                 </tr>

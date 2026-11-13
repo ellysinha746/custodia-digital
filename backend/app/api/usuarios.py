@@ -6,9 +6,10 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from app.db.session import get_db
-from app.core.security import hash_password
+from app.core.security import hash_password, validar_password
 from app.core.permisos import requiere, ETIQUETAS_ROL
 from app.models.caso import Caso
 from app.models.usuario import Usuario, RolEnum, EspecialidadEnum
@@ -32,6 +33,8 @@ class UsuarioAdminOut(BaseModel):
     registro_profesional: Optional[str] = None
     telefono: Optional[str] = None
     estado_solicitud: Optional[str] = None  # Sprint 6 (historia 25)
+    bloqueado_hasta: Optional[datetime] = None  # Sprint 6 (historia 27)
+    totp_activo: bool = False  # Sprint 6 (historia 24)
 
 
 class UsuarioNuevo(BaseModel):
@@ -75,6 +78,8 @@ def _a_salida(u: Usuario, casos: int) -> UsuarioAdminOut:
         registro_profesional=u.registro_profesional,
         telefono=u.telefono,
         estado_solicitud=u.estado_solicitud,
+        bloqueado_hasta=u.bloqueado_hasta,
+        totp_activo=bool(u.totp_activo),
     )
 
 
@@ -122,8 +127,7 @@ def crear_usuario(
 ):
     if db.query(Usuario).filter(Usuario.email == payload.email).first():
         raise HTTPException(status_code=409, detail="El email ya está registrado.")
-    if len(payload.password) < 8:
-        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres.")
+    validar_password(payload.password)  # Sprint 6 (historia 27)
     especialidad = _especialidad_segun_rol(payload.rol, payload.especialidad)
     nuevo = Usuario(
         nombre=payload.nombre.strip(),
@@ -259,5 +263,58 @@ def rechazar_solicitud(
         f"Hola {usuario.nombre}:\n\nEl jefe de laboratorio rechazó tu solicitud de cuenta."
         + (f"\n\nMotivo: {motivo}" if motivo else "")
         + "\n\nSi crees que es un error, comunícate con el laboratorio.",
+    )
+    return _a_salida(usuario, 0)
+
+
+# Sprint 6 (historia 27): el jefe de laboratorio levanta un bloqueo por intentos fallidos.
+@router.post("/{usuario_id}/desbloquear", response_model=UsuarioAdminOut)
+def desbloquear_usuario(
+    usuario_id: UUID,
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(requiere("gestionar_usuarios")),
+):
+    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+    usuario.bloqueado_hasta = None
+    usuario.intentos_fallidos = 0
+    db.commit()
+    db.refresh(usuario)
+    print(f"[seguridad] {usuario_actual.email} desbloqueó la cuenta {usuario.email}", flush=True)
+    return _a_salida(usuario, 0)
+
+
+# Sprint 6 (historia 24): si alguien pierde el celular, el jefe de laboratorio le reinicia
+# el 2FA; en su próximo ingreso tendrá que escanear un QR nuevo.
+@router.post("/{usuario_id}/reiniciar-2fa", response_model=UsuarioAdminOut)
+def reiniciar_2fa(
+    usuario_id: UUID,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(requiere("gestionar_usuarios")),
+):
+    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+    if usuario.id == usuario_actual.id:
+        raise HTTPException(
+            status_code=400,
+            detail="No puedes reiniciar tu propia verificación en dos pasos: pídeselo a otro jefe de laboratorio.",
+        )
+    usuario.totp_secreto = None
+    usuario.totp_activo = False
+    usuario.totp_ultimo_paso = None
+    usuario.sesion_version = (usuario.sesion_version or 0) + 1  # cierra sus sesiones abiertas
+    db.commit()
+    db.refresh(usuario)
+    print(f"[seguridad] {usuario_actual.email} reinició la verificación en dos pasos de {usuario.email}", flush=True)
+    background_tasks.add_task(
+        enviar_correo,
+        [usuario.email],
+        "[CustodiaDigital] Se reinició tu verificación en dos pasos",
+        f"Hola {usuario.nombre}:\n\n{usuario_actual.nombre} (jefe de laboratorio) reinició tu verificación "
+        "en dos pasos. En tu próximo ingreso tendrás que escanear un código QR nuevo.\n\n"
+        "Si no lo pediste, avísale de inmediato.",
     )
     return _a_salida(usuario, 0)

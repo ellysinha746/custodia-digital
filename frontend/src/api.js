@@ -34,7 +34,8 @@ api.interceptors.response.use(
   (respuesta) => respuesta,
   async (error) => {
     const original = error.config;
-    const esAuth = original?.url?.startsWith("/auth/login") || original?.url?.startsWith("/auth/refresh");
+    // Sprint 6 (historia 24): un código 2FA incorrecto (401) tampoco debe intentar renovar la sesión.
+    const esAuth = ["/auth/login", "/auth/refresh", "/auth/2fa"].some((r) => original?.url?.startsWith(r));
     if (error.response?.status === 401 && original && !original._reintento && !esAuth && obtenerRefreshToken()) {
       original._reintento = true;
       try {
