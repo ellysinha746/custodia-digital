@@ -34,6 +34,7 @@ class UsuarioAdminOut(BaseModel):
     telefono: Optional[str] = None
     estado_solicitud: Optional[str] = None  # Sprint 6 (historia 25)
     bloqueado_hasta: Optional[datetime] = None  # Sprint 6 (historia 27)
+    totp_activo: bool = False  # Sprint 6 (historia 24)
 
 
 class UsuarioNuevo(BaseModel):
@@ -78,6 +79,7 @@ def _a_salida(u: Usuario, casos: int) -> UsuarioAdminOut:
         telefono=u.telefono,
         estado_solicitud=u.estado_solicitud,
         bloqueado_hasta=u.bloqueado_hasta,
+        totp_activo=bool(u.totp_activo),
     )
 
 
@@ -125,7 +127,7 @@ def crear_usuario(
 ):
     if db.query(Usuario).filter(Usuario.email == payload.email).first():
         raise HTTPException(status_code=409, detail="El email ya está registrado.")
-        validar_password(payload.password)  # Sprint 6 (historia 27)
+    validar_password(payload.password)  # Sprint 6 (historia 27)
     especialidad = _especialidad_segun_rol(payload.rol, payload.especialidad)
     nuevo = Usuario(
         nombre=payload.nombre.strip(),
@@ -280,4 +282,39 @@ def desbloquear_usuario(
     db.commit()
     db.refresh(usuario)
     print(f"[seguridad] {usuario_actual.email} desbloqueó la cuenta {usuario.email}", flush=True)
+    return _a_salida(usuario, 0)
+
+
+# Sprint 6 (historia 24): si alguien pierde el celular, el jefe de laboratorio le reinicia
+# el 2FA; en su próximo ingreso tendrá que escanear un QR nuevo.
+@router.post("/{usuario_id}/reiniciar-2fa", response_model=UsuarioAdminOut)
+def reiniciar_2fa(
+    usuario_id: UUID,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(requiere("gestionar_usuarios")),
+):
+    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+    if usuario.id == usuario_actual.id:
+        raise HTTPException(
+            status_code=400,
+            detail="No puedes reiniciar tu propia verificación en dos pasos: pídeselo a otro jefe de laboratorio.",
+        )
+    usuario.totp_secreto = None
+    usuario.totp_activo = False
+    usuario.totp_ultimo_paso = None
+    usuario.sesion_version = (usuario.sesion_version or 0) + 1  # cierra sus sesiones abiertas
+    db.commit()
+    db.refresh(usuario)
+    print(f"[seguridad] {usuario_actual.email} reinició la verificación en dos pasos de {usuario.email}", flush=True)
+    background_tasks.add_task(
+        enviar_correo,
+        [usuario.email],
+        "[CustodiaDigital] Se reinició tu verificación en dos pasos",
+        f"Hola {usuario.nombre}:\n\n{usuario_actual.nombre} (jefe de laboratorio) reinició tu verificación "
+        "en dos pasos. En tu próximo ingreso tendrás que escanear un código QR nuevo.\n\n"
+        "Si no lo pediste, avísale de inmediato.",
+    )
     return _a_salida(usuario, 0)

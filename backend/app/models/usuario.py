@@ -48,3 +48,5 @@ class Usuario(Base):
     totp_secreto = Column(String, nullable=True)      # se guarda al empezar a configurarlo
     totp_activo = Column(Boolean, nullable=False, default=False, server_default="false")
     totp_ultimo_paso = Column(Integer, nullable=True)  # evita reutilizar el mismo código
+    # Va dentro de los tokens; al subirla (p. ej. al reiniciar el 2FA) se cierran todas las sesiones abiertas.
+    sesion_version = Column(Integer, nullable=False, default=0, server_default="0")

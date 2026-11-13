@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     MAX_INTENTOS_LOGIN: int = 5
     BLOQUEO_LOGIN_MIN: int = 15
     
+    # Sprint 6 (historia 24): verificación en dos pasos (TOTP).
+    TOTP_EMISOR: str = "CustodiaDigital"            # nombre que aparece en la app autenticadora
+    TOTP_ROLES_OBLIGATORIO: str = "admin,fiscal"    # roles que no entran sin 2FA
+    TOKEN_2FA_MIN: int = 5                          # minutos para escribir el código tras la contraseña
+
     # Sprint 6 (historia 27): tamaño máximo de una evidencia subida.
     MAX_SUBIDA_MB: int = 1024
 
