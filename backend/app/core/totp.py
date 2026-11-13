@@ -79,7 +79,7 @@ def verificar_codigo_correo(usuario, codigo: str) -> bool:
 
 
 def enmascarar_correo(email: str) -> str:
-    """ellysinha746@gmail.com → el***@gmail.com"""
+    """fiscal.quispe@example.com → fi***@example.com"""
     nombre, _, dominio = email.partition("@")
     return f"{nombre[:2]}***@{dominio}"
 
