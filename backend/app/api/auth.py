@@ -9,7 +9,7 @@ from jose import jwt, JWTError
 from app.db.session import get_db
 from app.schemas.usuario import (
     UsuarioCreate, UsuarioOut, LoginRequest, TokenResponse, RefreshRequest,
-    Token2FA, Codigo2FA, Configuracion2FA,
+    Token2FA, Codigo2FA, Activar2FA, Configuracion2FA,
 )
 from app.models.usuario import Usuario, RolEnum
 from app.services.correo_service import enviar_correo
@@ -142,13 +142,13 @@ def _usuario_de_token_2fa(db: Session, token: str):
     return usuario, bool(data.get("rec"))
 
 
-def _codigo_incorrecto(db: Session, usuario: Usuario) -> None:
+CODIGO_APP_INCORRECTO = "Código incorrecto o ya usado. Revisa que la hora de tu celular sea la correcta."
+
+
+def _codigo_incorrecto(db: Session, usuario: Usuario, detalle: str = CODIGO_APP_INCORRECTO) -> None:
     _registrar_fallo(db, usuario)  # cuenta para el bloqueo de la historia 27
     _comprobar_bloqueo(usuario)    # si con este fallo se bloqueó, avisa del bloqueo
-    raise HTTPException(
-        status_code=401,
-        detail="Código incorrecto o ya usado. Revisa que la hora de tu celular sea la correcta.",
-    )
+    raise HTTPException(status_code=401, detail=detalle)
 
 
 def _avisar_2fa(usuario: Usuario, asunto: str, texto: str) -> None:
@@ -173,18 +173,33 @@ def configurar_2fa(payload: Token2FA, db: Session = Depends(get_db)):
         )
     secreto = totp.nuevo_secreto(usuario)
     db.commit()
+    # Para activar también se pide este código: la contraseña sola no basta para registrar un celular.
+    _avisar_2fa(
+        usuario,
+        "Código para activar la verificación en dos pasos",
+        f"Hola {usuario.nombre}:\n\nTu código para activar la verificación en dos pasos es:\n\n"
+        f"    {totp.codigo_correo(usuario)}\n\n"
+        "Escríbelo en CustodiaDigital junto con el código de tu app autenticadora.\n"
+        "Si no estás configurando tu cuenta ahora mismo, NO lo compartas: alguien conoce tu "
+        "contraseña. Cámbiala y avisa al jefe de laboratorio.",
+    )
     uri = totp.uri_aprovisionamiento(usuario, secreto)
-    return Configuracion2FA(secreto=secreto, uri=uri, qr=totp.qr_data_uri(uri))
+    return Configuracion2FA(
+        secreto=secreto, uri=uri, qr=totp.qr_data_uri(uri), correo=totp.enmascarar_correo(usuario.email)
+    )
 
 
 @router.post("/2fa/activar", response_model=TokenResponse)
-def activar_2fa(payload: Codigo2FA, db: Session = Depends(get_db)):
-    """Confirma el primer código de la app: activa el 2FA y abre la sesión."""
+def activar_2fa(payload: Activar2FA, db: Session = Depends(get_db)):
+    """Confirma el código del correo y el primer código de la app: activa el 2FA y abre la sesión."""
     usuario, recordarme = _usuario_de_token_2fa(db, payload.token_2fa)
     if usuario.totp_activo:
         raise HTTPException(status_code=409, detail="La verificación en dos pasos ya está activa.")
     if not usuario.totp_secreto:
         raise HTTPException(status_code=400, detail="Primero genera el código QR.")
+    # Primero el del correo: si falla, el código de la app no se "gasta".
+    if not totp.verificar_codigo_correo(usuario, payload.codigo_correo):
+        _codigo_incorrecto(db, usuario, "El código del correo no coincide. Usa el del último correo que recibiste.")
     if not totp.verificar_codigo(usuario, payload.codigo):
         _codigo_incorrecto(db, usuario)
     usuario.totp_activo = True

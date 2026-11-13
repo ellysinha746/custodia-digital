@@ -54,10 +54,14 @@ class Codigo2FA(BaseModel):
     token_2fa: str
     codigo: str
 
+class Activar2FA(Codigo2FA):
+    codigo_correo: str  # el que llegó por correo al generar el QR
+
 class Configuracion2FA(BaseModel):
     secreto: str   # por si no se puede escanear el QR y hay que escribirlo a mano
     uri: str       # otpauth://totp/...
     qr: str        # imagen PNG como data URI
+    correo: str    # a dónde se mandó el código de confirmación (enmascarado)
 
 class RefreshRequest(BaseModel):
     refresh_token: str

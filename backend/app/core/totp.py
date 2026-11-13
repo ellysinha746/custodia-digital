@@ -63,6 +63,27 @@ def qr_data_uri(texto: str) -> str:
     return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode()
 
 
+def codigo_correo(usuario) -> str:
+    """Código de 6 dígitos que se manda al CORREO al configurar el 2FA: así, para registrar
+    un celular no basta la contraseña, también hace falta acceso al correo del usuario.
+    Sale del secreto pendiente (que se cifra con un IV aleatorio), así que cada QR nuevo
+    invalida el código anterior y no hace falta guardarlo en la base."""
+    mensaje = f"enrolamiento:{usuario.id}:{usuario.totp_secreto}".encode()
+    digest = hmac.new(settings.SECRET_KEY.encode(), mensaje, hashlib.sha256).digest()
+    return f"{int.from_bytes(digest[:8], 'big') % 1_000_000:06d}"
+
+
+def verificar_codigo_correo(usuario, codigo: str) -> bool:
+    codigo = (codigo or "").replace(" ", "").strip()
+    return bool(usuario.totp_secreto) and hmac.compare_digest(codigo_correo(usuario), codigo)
+
+
+def enmascarar_correo(email: str) -> str:
+    """ellysinha746@gmail.com → el***@gmail.com"""
+    nombre, _, dominio = email.partition("@")
+    return f"{nombre[:2]}***@{dominio}"
+
+
 def verificar_codigo(usuario, codigo: str) -> bool:
     """True si el código es válido y no se usó antes. Si es válido, recuerda su paso."""
     secreto = _secreto(usuario)
