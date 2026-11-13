@@ -102,7 +102,7 @@ def registro(payload: UsuarioCreate, background_tasks: BackgroundTasks, db: Sess
     existe = db.query(Usuario).filter(Usuario.email == payload.email).first()
     if existe:
         raise HTTPException(status_code=409, detail="El email ya está registrado.")
-        validar_password(payload.password)# Sprint 6 (historia 27)
+    validar_password(payload.password)  # Sprint 6 (historia 27)
     if not (payload.institucion or "").strip():
         raise HTTPException(status_code=400, detail="Indica tu institución (si eres perito particular, escríbelo así).")
     if not (payload.registro_profesional or "").strip():
