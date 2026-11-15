@@ -110,7 +110,7 @@ export default function Auditoria() {
                     {ev.resultado && (
                       <span
                         className={`font-label-code-sm text-label-code-sm px-1.5 py-0.5 rounded ${
-                          ["alterado", "dispositivo_distinto"].includes(ev.resultado)
+                          ["alterado", "dispositivo_distinto", "cotejo_no_coincide"].includes(ev.resultado)
                             ? "bg-error/15 text-error"
                             : "bg-surface-container-high text-on-surface-variant"
                         }`}

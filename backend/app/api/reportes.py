@@ -180,7 +180,10 @@ async def verificar_reporte(
 
 def _sello_tsa_out(reporte: ReporteAuditoria) -> SelloTsaOut:
     if not reporte.tsa_token:
-        return SelloTsaOut(presente=False, mensaje="Este reporte no tiene sello RFC 3161: la TSA no respondió al emitirlo.")
+        return SelloTsaOut(
+            presente=False,
+            mensaje="Este reporte no tiene sello RFC 3161: se emitió antes de esta función o la TSA no respondió.",
+        )
     datos = mensaje_sello(reporte.folio, reporte.generado_en, reporte.hash_contenido)
     valido = tsa_service.verificar(datos, reporte.tsa_token)
     return SelloTsaOut(
@@ -208,7 +211,10 @@ def descargar_sello_reporte(
     if not reporte or (reporte.generado_por_id != usuario_actual.id and usuario_actual.rol not in VEN_TODO):
         raise HTTPException(status_code=404, detail="Reporte no encontrado.")
     if not reporte.tsa_token:
-        raise HTTPException(status_code=404, detail="Este reporte no tiene sello RFC 3161 (la TSA no respondió al emitirlo).")
+        raise HTTPException(
+            status_code=404,
+            detail="Este reporte no tiene sello RFC 3161 (se emitió antes de esta función o la TSA no respondió).",
+        )
     contenido = tsa_service.paquete_zip(
         mensaje_sello(reporte.folio, reporte.generado_en, reporte.hash_contenido),
         reporte.tsa_token,

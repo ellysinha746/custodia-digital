@@ -77,7 +77,7 @@ def cotejar(
         resultado = "no_coincide"
         mensaje = (
             f"Ningún hash de {herramienta} coincide con la evidencia custodiada: no es el mismo archivo "
-            "que procesó la herramienta. Se generó una alerta para el jefe de laboratorio."
+            "que procesó la herramienta. El jefe de laboratorio verá la alerta."
         )
 
     ahora = datetime.now(timezone.utc)
@@ -108,18 +108,20 @@ def cotejar(
 
 
 def _alerta_cotejo(db: Session, archivo: Archivo, r: dict, herramienta: str, referencia: Optional[str]):
+    # Una sola alerta de cotejo pendiente por archivo: si no, alguien con permiso de cotejar
+    # podría llenar Alertas (y el correo de los jefes) pegando hashes inventados distintos.
+    # Los cotejos siguientes igual quedan en el historial del archivo y en la cadena de custodia.
     existente = (
         db.query(Alerta)
         .filter(
             Alerta.archivo_id == archivo.id,
             Alerta.tipo == "cotejo_no_coincide",
             Alerta.atendida_en.is_(None),
-            Alerta.hash_esperado == r["valor"],
         )
         .first()
     )
     if existente:
-        return None  # ya hay una alerta pendiente por este mismo hash
+        return None
     origen_txt = f"{herramienta} ({referencia})" if referencia else herramienta
     alerta = Alerta(
         archivo_id=archivo.id,
