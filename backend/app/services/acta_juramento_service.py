@@ -1,5 +1,4 @@
 import hashlib
-import hmac
 import io
 import json
 import unicodedata
@@ -11,7 +10,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
-from app.core.config import settings
+from app.core import sello
 
 # Sprint 5: acta de aceptación del cargo y juramento del perito oficial (CPP art. 174).
 # El texto jurado se guarda tal cual; su SHA-256 y una firma HMAC del servidor
@@ -70,9 +69,12 @@ def hash_acta(designacion, texto: str, fecha: datetime, forma: str) -> str:
     return hashlib.sha256(canonico.encode("utf-8")).hexdigest()
 
 
+def mensaje_acta(designacion_id, h: str) -> bytes:
+    return f"{designacion_id}|{h}".encode("utf-8")
+
+
 def firmar_acta(designacion_id, h: str) -> str:
-    mensaje = f"{designacion_id}|{h}".encode("utf-8")
-    return hmac.new(settings.SECRET_KEY.encode("utf-8"), mensaje, hashlib.sha256).hexdigest()
+    return sello.firmar(mensaje_acta(designacion_id, h))  # Sprint 6 (historia 27): clave propia de sellos
 
 
 def acta_integra(designacion) -> bool:
@@ -80,8 +82,8 @@ def acta_integra(designacion) -> bool:
     if not designacion.juramento_en or not designacion.juramento_hash:
         return False
     h = hash_acta(designacion, designacion.juramento_texto, designacion.juramento_en, designacion.juramento_forma)
-    return h == designacion.juramento_hash and hmac.compare_digest(
-        firmar_acta(designacion.id, h), designacion.juramento_firma or ""
+    return h == designacion.juramento_hash and sello.firma_valida(
+        mensaje_acta(designacion.id, h), designacion.juramento_firma
     )
 
 

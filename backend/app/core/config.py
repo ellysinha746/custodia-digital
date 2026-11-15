@@ -3,6 +3,9 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str
+    # Sprint 6 (historia 27): clave de los sellos HMAC de reportes y actas, separada de la
+    # de sesiones. Si queda vacía se usa SECRET_KEY (compatibilidad con lo ya emitido).
+    SELLO_SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
         # Sprint 6 (historia 25): sesión persistente. Con "Recordarme" el refresh token

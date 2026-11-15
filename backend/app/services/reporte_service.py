@@ -1,6 +1,5 @@
 import csv
 import hashlib
-import hmac
 import io
 import json
 from datetime import datetime, timezone
@@ -12,7 +11,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
-from app.core.config import settings
+from app.core import sello
 
 # Sprint 4 (historia 16): reporte de auditoría con sello de tiempo.
 #
@@ -36,15 +35,18 @@ def hash_contenido(eventos: List[Dict]) -> str:
     return hashlib.sha256(canonico.encode("utf-8")).hexdigest()
 
 
-def firmar(folio: str, generado_en: datetime, hash_eventos: str) -> str:
+def _mensaje(folio: str, generado_en: datetime, hash_eventos: str) -> bytes:
     # Se normaliza a UTC para que la firma no dependa de la zona horaria de la base.
     fecha = generado_en.astimezone(timezone.utc).isoformat()
-    mensaje = f"{folio}|{fecha}|{hash_eventos}".encode("utf-8")
-    return hmac.new(settings.SECRET_KEY.encode("utf-8"), mensaje, hashlib.sha256).hexdigest()
+    return f"{folio}|{fecha}|{hash_eventos}".encode("utf-8")
+
+
+def firmar(folio: str, generado_en: datetime, hash_eventos: str) -> str:
+    return sello.firmar(_mensaje(folio, generado_en, hash_eventos))  # Sprint 6 (historia 27)
 
 
 def firma_valida(folio: str, generado_en: datetime, hash_eventos: str, firma: str) -> bool:
-    return hmac.compare_digest(firmar(folio, generado_en, hash_eventos), firma)
+    return sello.firma_valida(_mensaje(folio, generado_en, hash_eventos), firma)
 
 
 def _fecha_utc(dt: datetime) -> str:

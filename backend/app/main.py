@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth, casos, archivos, auditoria, busqueda, alertas, fichas, observadas, reportes, metricas, usuarios, peritos, pericias, recordatorios
 from app.core.config import settings
+from app.core.cabeceras import cabeceras_seguridad
 from app.services.integridad_service import escanear_todos, notificar_alerta
 from app.services.recordatorio_service import enviar_recordatorios
 from app.services.storage_service import preparar_almacenamiento
@@ -53,6 +54,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Cadena de Custodia - API", lifespan=lifespan)
+
+# Sprint 6 (historia 27): cabeceras de seguridad HTTP (CSP, X-Frame-Options, nosniff, Referrer-Policy...).
+# También van en las respuestas de error (401, 403, 404, 422...).
+app.middleware("http")(cabeceras_seguridad)
 
 app.add_middleware(
     CORSMiddleware,
