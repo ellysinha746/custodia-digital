@@ -11,6 +11,8 @@ from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 from app.core import sello
+from app.core.config import settings
+from app.services import tsa_service  # Sprint 6 (historia 21)
 
 # Sprint 5: acta de aceptación del cargo y juramento del perito oficial (CPP art. 174).
 # El texto jurado se guarda tal cual; su SHA-256 y una firma HMAC del servidor
@@ -87,6 +89,24 @@ def acta_integra(designacion) -> bool:
     )
 
 
+def _linea_tsa(designacion) -> str:
+    """Sprint 6 (historia 21): sello RFC 3161 de una autoridad externa, verificado al generar el PDF."""
+    if not designacion.juramento_tsa_token:
+        return "Sello de tiempo RFC 3161: no disponible (la autoridad de sellado no respondió)."
+    valido = tsa_service.verificar(
+        mensaje_acta(designacion.id, designacion.juramento_hash), designacion.juramento_tsa_token
+    )
+    fecha = designacion.juramento_tsa_fecha
+    posterior = fecha and designacion.juramento_en and (fecha - designacion.juramento_en) > timedelta(minutes=10)
+    return (
+        f"Sello de tiempo RFC 3161: {fecha.astimezone(timezone.utc).strftime('%d/%m/%Y %H:%M:%S UTC')} · "
+        f"{settings.TSA_NOMBRE} · N° de serie {designacion.juramento_tsa_serie} — "
+        + ("VERIFICADO" if valido else "NO CORRESPONDE AL ACTA")
+        + (" (sellado después del juramento)" if posterior else "")
+        + ". Verificable con OpenSSL descargando el paquete del sello."
+    )
+
+
 def _f(dt) -> str:
     return dt.astimezone(PERU).strftime("%d/%m/%Y %H:%M (hora de Lima)") if dt else "—"
 
@@ -143,6 +163,7 @@ def generar_pdf(designacion) -> bytes:
         Spacer(1, 8 * mm),
         Paragraph(f"SHA-256 del acta: {designacion.juramento_hash}", chico),
         Paragraph(f"Sello del servidor (HMAC-SHA256): {designacion.juramento_firma}", chico),
+        Paragraph(_linea_tsa(designacion), chico),  # Sprint 6 (historia 21)
         Paragraph(
             "Integridad: VERIFICADA — el acta coincide con lo registrado." if integro
             else "Integridad: NO COINCIDE — el registro fue modificado después del juramento.",

@@ -35,6 +35,18 @@ def hash_contenido(eventos: List[Dict]) -> str:
     return hashlib.sha256(canonico.encode("utf-8")).hexdigest()
 
 
+def mensaje_sello(folio: str, generado_en: datetime, hash_eventos: str) -> bytes:
+    """Datos que se firman con HMAC y que sella la TSA externa (historia 21)."""
+    return _mensaje(folio, generado_en, hash_eventos)
+
+
+def _texto_tsa(meta: Dict) -> str:
+    t = meta.get("tsa")
+    if not t:
+        return "No disponible: la autoridad de sellado no respondió al emitir este reporte."
+    return f"{_fecha_utc(t.fecha)} · {t.tsa} · N° de serie {t.serie}"
+
+
 def _mensaje(folio: str, generado_en: datetime, hash_eventos: str) -> bytes:
     # Se normaliza a UTC para que la firma no dependa de la zona horaria de la base.
     fecha = generado_en.astimezone(timezone.utc).isoformat()
@@ -70,6 +82,7 @@ def generar_csv(eventos: List[Dict], meta: Dict) -> bytes:
     w.writerow(["fecha_emision_utc", meta["generado_en"].isoformat()])
     w.writerow(["sha256_eventos", meta["hash_contenido"]])
     w.writerow(["firma_hmac_sha256", meta["firma"]])
+    w.writerow(["sello_rfc3161", _texto_tsa(meta)])  # Sprint 6 (historia 21)
     return ("﻿" + salida.getvalue()).encode("utf-8")
 
 
@@ -133,15 +146,18 @@ def generar_pdf(eventos: List[Dict], meta: Dict) -> bytes:
             [Paragraph("Fecha de emisión (UTC)", celda), Paragraph(meta["generado_en"].isoformat(), mono)],
             [Paragraph("SHA-256 de los eventos", celda), Paragraph(meta["hash_contenido"], mono)],
             [Paragraph("Firma HMAC-SHA256", celda), Paragraph(meta["firma"], mono)],
+            # Sprint 6 (historia 21): sello de una autoridad de sellado de tiempo externa.
+            [Paragraph("Sello RFC 3161 (TSA externa)", celda), Paragraph(_texto_tsa(meta), mono)],
             [Paragraph(
                 "Para comprobar la autenticidad, sube este archivo en Auditoría → Verificar reporte. "
-                "Cualquier modificación del archivo invalida la verificación.", celda), ""],
+                "Cualquier modificación del archivo invalida la verificación. El sello RFC 3161 también "
+                "se puede comprobar con OpenSSL, sin depender de CustodiaDigital.", celda), ""],
         ],
         colWidths=[50 * mm, None],
     )
     sello.setStyle(TableStyle([
         ("SPAN", (0, 0), (1, 0)),
-        ("SPAN", (0, 4), (1, 4)),
+        ("SPAN", (0, 5), (1, 5)),
         ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#0E7490")),
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E0F2F7")),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),

@@ -3,15 +3,18 @@ import uuid
 from datetime import datetime, timezone
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.core.config import settings
 from app.core.security import get_current_user
-from app.core.permisos import condicion_casos_visibles
+from app.core.permisos import condicion_casos_visibles, VEN_TODO
+from app.services import tsa_service  # Sprint 6 (historia 21)
 from app.models.log_custodia import LogCustodia, AccionEnum
 from app.models.archivo import Archivo
 from app.models.caso import Caso
@@ -23,11 +26,22 @@ from app.services.reporte_service import (
     firma_valida,
     generar_csv,
     generar_pdf,
+    mensaje_sello,
 )
 
 router = APIRouter(prefix="/auditoria/reporte", tags=["reporte de auditoría"])
 
 MAX_EVENTOS = 5000
+
+
+class SelloTsaOut(BaseModel):
+    """Sprint 6 (historia 21): estado del sello RFC 3161 del reporte."""
+    presente: bool
+    valido: bool = False
+    mensaje: str
+    fecha: Optional[datetime] = None
+    serie: Optional[str] = None
+    tsa: Optional[str] = None
 
 
 class VerificacionReporteOut(BaseModel):
@@ -38,6 +52,7 @@ class VerificacionReporteOut(BaseModel):
     generado_en: Optional[datetime] = None
     generado_por: Optional[str] = None
     total_eventos: Optional[int] = None
+    sello_tsa: Optional[SelloTsaOut] = None  # Sprint 6 (historia 21)
 
 
 def _eventos_visibles(db: Session, usuario_actual, accion: Optional[AccionEnum]):
@@ -81,6 +96,8 @@ def exportar_reporte(
     folio = f"AUD-{generado_en:%Y%m%d}-{uuid.uuid4().hex[:6].upper()}"
     h_eventos = hash_contenido(eventos)
     firma = firmar(folio, generado_en, h_eventos)
+    # Sprint 6 (historia 21): sello RFC 3161 de una TSA externa (None si no respondió).
+    sello_tsa = tsa_service.sellar(mensaje_sello(folio, generado_en, h_eventos))
 
     meta = {
         "folio": folio,
@@ -89,6 +106,7 @@ def exportar_reporte(
         "filtro": accion.value if accion else None,
         "hash_contenido": h_eventos,
         "firma": firma,
+        "tsa": sello_tsa,
     }
     contenido = generar_pdf(eventos, meta) if formato == "pdf" else generar_csv(eventos, meta)
 
@@ -103,6 +121,9 @@ def exportar_reporte(
             firma=firma,
             generado_en=generado_en,
             generado_por_id=usuario_actual.id,
+            tsa_token=sello_tsa.token if sello_tsa else None,
+            tsa_fecha=sello_tsa.fecha if sello_tsa else None,
+            tsa_serie=sello_tsa.serie if sello_tsa else None,
         )
     )
     db.commit()
@@ -113,7 +134,8 @@ def exportar_reporte(
         headers={
             "Content-Disposition": f'attachment; filename="reporte_auditoria_{folio}.{formato}"',
             "X-Folio": folio,
-            "Access-Control-Expose-Headers": "X-Folio",
+            "X-Sello-Tsa": "si" if sello_tsa else "no",  # Sprint 6 (historia 21)
+            "Access-Control-Expose-Headers": "X-Folio, X-Sello-Tsa",
         },
     )
 
@@ -148,4 +170,55 @@ async def verificar_reporte(
         generado_en=reporte.generado_en,
         generado_por=reporte.generado_por.nombre,
         total_eventos=reporte.total_eventos,
+        # openssl corre fuera del bucle de eventos (este endpoint es async)
+        sello_tsa=await run_in_threadpool(_sello_tsa_out, reporte),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Sprint 6 (historia 21): sello de tiempo RFC 3161.
+
+def _sello_tsa_out(reporte: ReporteAuditoria) -> SelloTsaOut:
+    if not reporte.tsa_token:
+        return SelloTsaOut(presente=False, mensaje="Este reporte no tiene sello RFC 3161: la TSA no respondió al emitirlo.")
+    datos = mensaje_sello(reporte.folio, reporte.generado_en, reporte.hash_contenido)
+    valido = tsa_service.verificar(datos, reporte.tsa_token)
+    return SelloTsaOut(
+        presente=True,
+        valido=valido,
+        mensaje=(
+            "Sello RFC 3161 válido: una autoridad externa certifica que el reporte existía en esa fecha."
+            if valido else "El sello RFC 3161 NO corresponde a los datos del reporte."
+        ),
+        fecha=reporte.tsa_fecha,
+        serie=reporte.tsa_serie,
+        tsa=settings.TSA_NOMBRE,
+    )
+
+
+@router.get("/{folio}/sello-tiempo")
+def descargar_sello_reporte(
+    folio: str,
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(get_current_user),
+):
+    """ZIP para verificar el sello RFC 3161 con OpenSSL, sin depender de CustodiaDigital."""
+    reporte = db.query(ReporteAuditoria).filter(ReporteAuditoria.folio == folio).first()
+    # Lo descarga quien emitió el reporte, o el jefe y el fiscal (ven toda la auditoría).
+    if not reporte or (reporte.generado_por_id != usuario_actual.id and usuario_actual.rol not in VEN_TODO):
+        raise HTTPException(status_code=404, detail="Reporte no encontrado.")
+    if not reporte.tsa_token:
+        raise HTTPException(status_code=404, detail="Este reporte no tiene sello RFC 3161 (la TSA no respondió al emitirlo).")
+    contenido = tsa_service.paquete_zip(
+        mensaje_sello(reporte.folio, reporte.generado_en, reporte.hash_contenido),
+        reporte.tsa_token,
+        f"Reporte de auditoría {reporte.folio} (SHA-256 de los eventos y firma del servidor).",
+        reporte.tsa_fecha,
+        reporte.tsa_serie,
+        settings.TSA_NOMBRE,
+    )
+    return Response(
+        content=contenido,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="sello_rfc3161_{folio}.zip"'},
     )

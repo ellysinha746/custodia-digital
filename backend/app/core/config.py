@@ -22,6 +22,14 @@ class Settings(BaseSettings):
     TOTP_ROLES_OBLIGATORIO: str = "admin,fiscal"    # roles que no entran sin 2FA
     TOKEN_2FA_MIN: int = 10                         # minutos para escribir los códigos tras la contraseña
 
+    # Sprint 6 (historia 21): sello de tiempo RFC 3161 de una autoridad externa (TSA).
+    # Si TSA_URL queda vacío, los reportes y actas se emiten solo con el sello HMAC propio.
+    TSA_URL: str = "https://freetsa.org/tsr"
+    TSA_NOMBRE: str = "FreeTSA (freetsa.org)"
+    TSA_TIMEOUT_SEG: float = 8
+    TSA_CA_FILE: str = ""      # vacío → app/certs/freetsa_cacert.pem
+    TSA_CERT_FILE: str = ""    # vacío → app/certs/freetsa_tsa.crt
+
     # Sprint 6 (historia 27): tamaño máximo de una evidencia subida.
     MAX_SUBIDA_MB: int = 1024
 

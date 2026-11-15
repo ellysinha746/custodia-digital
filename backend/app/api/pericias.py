@@ -18,6 +18,8 @@ from app.models.pericia import Pericia, DesignacionPericia, ObservacionPericia
 from app.models.usuario import Usuario, RolEnum, EspecialidadEnum
 from app.services import pericia_service as reglas
 from app.services import acta_juramento_service as acta
+from app.services import tsa_service  # Sprint 6 (historia 21)
+from app.core.config import settings
 
 # Sprint 5 (épica H19, historias 19.3 a 19.8): trámite de la pericia.
 router = APIRouter(tags=["procedimiento pericial"])
@@ -64,6 +66,7 @@ class DesignacionOut(BaseModel):
     juramento_en: Optional[datetime] = None
     juramento_hash: Optional[str] = None
     tiene_acta: bool = False
+    juramento_tsa_fecha: Optional[datetime] = None  # Sprint 6 (historia 21): sello RFC 3161
 
 
 class ObservacionOut(BaseModel):
@@ -223,6 +226,7 @@ def _a_salida(p: Pericia, usuario) -> PericiaOut:
                 juramento_en=d.juramento_en,
                 juramento_hash=d.juramento_hash,
                 tiene_acta=bool(d.juramento_hash),
+                juramento_tsa_fecha=d.juramento_tsa_fecha,
             )
             for d in p.designaciones
         ],
@@ -380,12 +384,50 @@ def descargar_acta(designacion_id: UUID, db: Session = Depends(get_db), usuario_
     pericia = _obtener_pericia(db, d.pericia_id, usuario_actual)
     if not d.juramento_hash:
         raise HTTPException(status_code=404, detail="Este perito aún no presta juramento en línea.")
+    # Sprint 6 (historia 21): si al juramentar la TSA no respondió (o el acta es anterior a
+    # esta historia), se intenta sellar ahora; el PDF indica que el sello es posterior.
+    if not d.juramento_tsa_token:
+        _sellar_acta(d)
     reglas.registrar_evento(db, pericia, usuario_actual, "consulta_acta", f"Acta de juramento de {d.usuario.nombre}")
     db.commit()
     nombre = f"Acta_juramento_{pericia.codigo}_{d.usuario.nombre.replace(' ', '_')}.pdf"
     return Response(
         content=acta.generar_pdf(d), media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
+    )
+
+
+# Sprint 6 (historia 21): sello de tiempo RFC 3161 del acta de juramento.
+def _sellar_acta(d: DesignacionPericia) -> None:
+    """Pide el sello sobre "designación|hash del acta" (lo mismo que firma el HMAC). No hace commit."""
+    sello = tsa_service.sellar(acta.mensaje_acta(d.id, d.juramento_hash))
+    if sello:
+        d.juramento_tsa_token = sello.token
+        d.juramento_tsa_fecha = sello.fecha
+        d.juramento_tsa_serie = sello.serie
+
+
+@router.get("/designaciones-pericia/{designacion_id}/acta/sello-tiempo")
+def descargar_sello_acta(designacion_id: UUID, db: Session = Depends(get_db), usuario_actual=Depends(get_current_user)):
+    """ZIP para verificar el sello RFC 3161 del acta con OpenSSL, sin depender de CustodiaDigital."""
+    d = db.query(DesignacionPericia).filter(DesignacionPericia.id == designacion_id).first()
+    if not d:
+        raise HTTPException(status_code=404, detail="Designación no encontrada.")
+    pericia = _obtener_pericia(db, d.pericia_id, usuario_actual)
+    if not d.juramento_tsa_token:
+        raise HTTPException(status_code=404, detail="Esta acta todavía no tiene sello RFC 3161. Descarga el acta para intentar sellarla.")
+    contenido = tsa_service.paquete_zip(
+        acta.mensaje_acta(d.id, d.juramento_hash),
+        d.juramento_tsa_token,
+        f"Acta de juramento de {d.usuario.nombre} en la pericia {pericia.codigo} "
+        "(identificador de la designación y SHA-256 del acta).",
+        d.juramento_tsa_fecha,
+        d.juramento_tsa_serie,
+        settings.TSA_NOMBRE,
+    )
+    return Response(
+        content=contenido, media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="sello_rfc3161_acta_{pericia.codigo}.zip"'},
     )
 
 
@@ -803,6 +845,7 @@ def juramentar(
     d.juramento_en = fecha
     d.juramento_hash = h
     d.juramento_firma = acta.firmar_acta(d.id, h)
+    _sellar_acta(d)  # Sprint 6 (historia 21): sello RFC 3161 de una TSA externa
     forma = "juramento" if payload.forma == "juramento" else "promesa de honor"
     reglas.registrar_evento(db, pericia, usuario_actual, "juramento", f"{usuario_actual.nombre} presta {forma}. Acta SHA-256 {h[:16]}…")
     db.commit()

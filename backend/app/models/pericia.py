@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Text, Integer, Boolean, ForeignKey, DateTime, UniqueConstraint, func
+from sqlalchemy import Column, String, Text, Integer, Boolean, ForeignKey, DateTime, UniqueConstraint, LargeBinary, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from app.db.session import Base
@@ -91,6 +91,10 @@ class DesignacionPericia(Base):
     juramento_en = Column(DateTime(timezone=True), nullable=True)
     juramento_hash = Column(String, nullable=True)   # SHA-256 del acta
     juramento_firma = Column(String, nullable=True)  # HMAC del servidor sobre el hash
+    # Sprint 6 (historia 21): sello RFC 3161 de una TSA externa sobre "designación|hash del acta".
+    juramento_tsa_token = Column(LargeBinary, nullable=True)
+    juramento_tsa_fecha = Column(DateTime(timezone=True), nullable=True)
+    juramento_tsa_serie = Column(String, nullable=True)
 
     pericia = relationship("Pericia", back_populates="designaciones")
     usuario = relationship("Usuario", foreign_keys=[usuario_id])

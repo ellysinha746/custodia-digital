@@ -27,7 +27,13 @@ export default function ReporteAuditoria({ filtro }) {
       a.click();
       a.remove();
       URL.revokeObjectURL(enlace);
-      notificar(`Reporte ${folio} emitido con sello de tiempo.`, { tipo: "success" });
+      // Sprint 6 (historia 21): avisa si se obtuvo el sello RFC 3161 de la autoridad externa.
+      notificar(
+        headers["x-sello-tsa"] === "si"
+          ? `Reporte ${folio} emitido con sello del servidor y sello RFC 3161 de FreeTSA.`
+          : `Reporte ${folio} emitido con sello del servidor. FreeTSA no respondió: va sin sello RFC 3161.`,
+        { tipo: headers["x-sello-tsa"] === "si" ? "success" : "info" }
+      );
     } catch {
       notificar("No se pudo exportar el reporte.", { tipo: "error" });
     } finally {
@@ -46,6 +52,23 @@ export default function ReporteAuditoria({ filtro }) {
       setVerificacion({ ...data, nombre: archivo.name });
     } catch {
       notificar("No se pudo verificar el reporte.", { tipo: "error" });
+    }
+  };
+
+  // Sprint 6 (historia 21): ZIP con el sello .tsr, los datos sellados y los certificados de FreeTSA.
+  const bajarSello = async (folio) => {
+    try {
+      const { data } = await api.get(`/auditoria/reporte/${encodeURIComponent(folio)}/sello-tiempo`, { responseType: "blob" });
+      const enlace = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = enlace;
+      a.download = `sello_rfc3161_${folio}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(enlace);
+    } catch {
+      notificar("No se pudo descargar el sello (solo lo descarga quien emitió el reporte, el jefe o el fiscal).", { tipo: "error" });
     }
   };
 
@@ -90,6 +113,30 @@ export default function ReporteAuditoria({ filtro }) {
                 {new Date(verificacion.generado_en).toLocaleString("es-PE")} por {verificacion.generado_por} ·{" "}
                 {verificacion.total_eventos} evento(s)
               </p>
+            )}
+            {/* Sprint 6 (historia 21): sello de tiempo RFC 3161 de la autoridad externa */}
+            {verificacion.valido && verificacion.sello_tsa && (
+              <div className="mt-2 flex items-start gap-1.5">
+                <span
+                  className={`material-symbols-outlined text-base ${
+                    !verificacion.sello_tsa.presente ? "text-outline" : verificacion.sello_tsa.valido ? "text-tertiary" : "text-error"
+                  }`}
+                >
+                  schedule
+                </span>
+                <div className="min-w-0">
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">{verificacion.sello_tsa.mensaje}</p>
+                  {verificacion.sello_tsa.presente && (
+                    <p className="font-label-code-sm text-label-code-sm text-outline">
+                      {verificacion.sello_tsa.tsa} · {new Date(verificacion.sello_tsa.fecha).toLocaleString("es-PE")} · N°{" "}
+                      {verificacion.sello_tsa.serie} ·{" "}
+                      <button onClick={() => bajarSello(verificacion.folio)} className="text-primary hover:underline">
+                        descargar sello para OpenSSL
+                      </button>
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
             <p className="mt-1 font-label-code-sm text-label-code-sm text-outline truncate">Archivo: {verificacion.nombre}</p>
           </div>
