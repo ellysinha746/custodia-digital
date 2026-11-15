@@ -18,6 +18,12 @@ const UBICACION = {
   dispositivo: "Dispositivo",
 };
 
+const ORIGEN_ALERTA = {
+  verificacion_manual: "Verificación manual",
+  escaneo_automatico: "Escaneo automático",
+  cotejo: "Cotejo con herramienta forense", // Sprint 6 (historia 23)
+};
+
 function hashCorto(h) {
   if (!h) return "— (no existe)";
   return `${h.slice(0, 12)}…${h.slice(-6)}`;
@@ -161,9 +167,18 @@ export default function Alertas() {
                       <span className="text-error">{hashCorto(a.hash_encontrado)}</span>
                     </div>
                   )}
+                  {/* Sprint 6 (historia 23): el hash del informe de Cellebrite/FTK no es el de la evidencia */}
+                  {a.tipo === "cotejo_no_coincide" && (
+                    <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-label-code-sm text-label-code-sm">
+                      <span className="text-outline">Según el informe</span>
+                      <span className="text-error">{hashCorto(a.hash_esperado)}</span>
+                      <span className="text-outline">En CustodiaDigital</span>
+                      <span className="text-on-surface-variant">{hashCorto(a.hash_encontrado)}</span>
+                    </div>
+                  )}
                   <div className="mt-2 flex items-center gap-3 flex-wrap font-label-code-sm text-label-code-sm text-outline">
                     <span>{new Date(a.creada_en).toLocaleString("es-PE")}</span>
-                    <span>· {a.origen === "verificacion_manual" ? "Verificación manual" : "Escaneo automático"}</span>
+                    <span>· {ORIGEN_ALERTA[a.origen] || "Escaneo automático"}</span>
                     <span className="inline-flex items-center gap-1">
                       · <span className="material-symbols-outlined text-sm">{a.correo_enviado ? "mark_email_read" : "unsubscribe"}</span>
                       {a.correo_enviado ? "Correo enviado" : "Correo no enviado"}

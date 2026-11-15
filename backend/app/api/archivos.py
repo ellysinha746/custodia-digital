@@ -13,6 +13,8 @@ from app.schemas.archivo import (
     MetadatosUpdate,
     VerificacionOut,
     LogCustodiaOut,
+    CotejoIn,
+    CotejoOut,
 )
 from app.models.caso import Caso, EstadoCasoEnum
 from app.models.archivo import Archivo, EstadoProcesamientoEnum
@@ -23,8 +25,9 @@ from app.core.permisos import puede_ver_caso, exigir
 from app.services.storage_service import guardar_archivo, existe, tamano, abrir, respuesta_descarga, descripcion
 from app.services.metadatos_service import extraer_metadatos
 from app.services.validacion_subida import validar_extension, copiar_con_limite, validar_contenido
-from app.services.hashing_service import calcular_sha256
+from app.services.hashing_service import calcular_sha256, calcular_hashes
 from app.services.integridad_service import revisar_archivo, notificar_alerta
+from app.services import cotejo_service  # Sprint 6 (historia 23)
 from app.services.ficha_service import normalizar_ficha
 router = APIRouter(tags=["archivos"])
 
@@ -69,9 +72,11 @@ def _procesar_hash_en_segundo_plano(archivo_id: UUID, ruta_copia: str) -> None:
         archivo = db.query(Archivo).filter(Archivo.id == archivo_id).first()
         if not archivo:
             return
-        hash_calculado = calcular_sha256(ruta_copia)
-        archivo.hash_original = hash_calculado
-        archivo.hash_actual = hash_calculado
+        hashes = calcular_hashes(ruta_copia)  # Sprint 6 (historia 23): SHA-256 + SHA-1 + MD5
+        archivo.hash_original = hashes["sha256"]
+        archivo.hash_actual = hashes["sha256"]
+        archivo.hash_sha1 = hashes["sha1"]
+        archivo.hash_md5 = hashes["md5"]
         archivo.estado_procesamiento = EstadoProcesamientoEnum.listo
         db.add(
             LogCustodia(
@@ -156,14 +161,16 @@ def subir_archivo(
         background_tasks.add_task(_procesar_hash_en_segundo_plano, nuevo.id, ruta_copia)
         return nuevo
 
-    hash_copia = calcular_sha256(ruta_copia)
+    hashes = calcular_hashes(ruta_copia)  # Sprint 6 (historia 23): SHA-256 + SHA-1 + MD5
     nuevo = Archivo(
         caso_id=caso_id,
         nombre_original=archivo.filename,
         ruta_original=ruta_original,
         ruta_copia_trabajo=ruta_copia,
-        hash_original=hash_copia,
-        hash_actual=hash_copia,
+        hash_original=hashes["sha256"],
+        hash_actual=hashes["sha256"],
+        hash_sha1=hashes["sha1"],
+        hash_md5=hashes["md5"],
         estado_procesamiento=EstadoProcesamientoEnum.listo,
         metadatos={"content_type": archivo.content_type},
         metadatos_tecnicos=metadatos_tecnicos,
@@ -376,3 +383,64 @@ def actualizar_metadatos(
     db.commit()
     db.refresh(archivo)
     return archivo
+
+
+# ---------------------------------------------------------------------------
+# Sprint 6 (historia 23): doble hash y cotejo con Cellebrite / FTK Imager.
+
+def _archivo_listo(db: Session, archivo_id: UUID, usuario_actual) -> Archivo:
+    exigir(usuario_actual, "verificar_integridad")
+    archivo = _obtener_archivo(db, archivo_id, usuario_actual)
+    if archivo.estado_procesamiento != EstadoProcesamientoEnum.listo or not archivo.hash_original:
+        raise HTTPException(status_code=409, detail="El archivo aún no tiene un hash original calculado.")
+    return archivo
+
+
+@router.post("/archivos/{archivo_id}/hashes-adicionales", response_model=ArchivoOut)
+def calcular_hashes_adicionales(
+    archivo_id: UUID,
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(get_current_user),
+):
+    """SHA-1 y MD5 de evidencia subida antes de la historia 23 (se leen del original)."""
+    archivo = _archivo_listo(db, archivo_id, usuario_actual)
+    if cotejo_service.asegurar_hashes_adicionales(archivo):
+        db.add(
+            LogCustodia(
+                archivo_id=archivo.id,
+                usuario_id=usuario_actual.id,
+                accion=AccionEnum.acceso,
+                resultado="hashes SHA-1 y MD5 calculados",
+            )
+        )
+        db.commit()
+        db.refresh(archivo)
+    return archivo
+
+
+@router.post("/archivos/{archivo_id}/cotejar", response_model=CotejoOut)
+def cotejar_hash(
+    archivo_id: UUID,
+    payload: CotejoIn,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(get_current_user),
+):
+    """Compara el hash del informe de una herramienta forense con la evidencia custodiada."""
+    archivo = _archivo_listo(db, archivo_id, usuario_actual)
+    db.refresh(archivo, with_for_update=True)  # dos cotejos a la vez no se pisan el historial
+    resultado, alerta = cotejo_service.cotejar(
+        db, archivo, usuario_actual, payload.herramienta, payload.texto, payload.referencia
+    )
+    db.add(
+        LogCustodia(
+            archivo_id=archivo.id,
+            usuario_id=usuario_actual.id,
+            accion=AccionEnum.verificacion,
+            resultado=f"cotejo_{resultado['resultado']}",
+        )
+    )
+    db.commit()
+    if alerta:
+        background_tasks.add_task(notificar_alerta, alerta.id)
+    return resultado

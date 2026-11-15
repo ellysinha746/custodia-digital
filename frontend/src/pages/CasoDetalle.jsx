@@ -7,6 +7,7 @@ import { useToast } from "../components/Toast";
 import FichaDispositivo, { CamposFicha } from "../components/FichaDispositivo";
 import VersionesObservadas from "../components/VersionesObservadas";
 import MetadatosTecnicos from "../components/MetadatosTecnicos";
+import HashesEvidencia from "../components/HashesEvidencia";
 import { puede, useUsuario } from "../permisos";
 import Pericias from "../components/Pericias";
 
@@ -293,6 +294,14 @@ function FilaArchivo({ archivo, caso, onCambio }) {
                 )}
               </div>
 
+              {/* Sprint 6 (historia 23) */}
+              <HashesEvidencia
+                archivo={archivo}
+                puedeCotejar={puede(usuario, "verificar_integridad")}
+                onCambio={onCambio}
+                onHistorial={cargarHistorial}
+              />
+
               <MetadatosTecnicos
                 archivo={archivo}
                 puedeExtraer={puede(usuario, "editar_metadatos")}
@@ -335,7 +344,7 @@ function FilaArchivo({ archivo, caso, onCambio }) {
                       {log.resultado && (
                         <span
                           className={`font-label-code-sm text-label-code-sm px-1.5 py-0.5 rounded ${
-                            ["alterado", "dispositivo_distinto"].includes(log.resultado)
+                            ["alterado", "dispositivo_distinto", "cotejo_no_coincide"].includes(log.resultado)
                               ? "bg-error/15 text-error"
                               : "bg-surface-container-high text-on-surface-variant"
                           }`}
