@@ -3,6 +3,9 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str
+    # Sprint 6 (historia 27): clave de los sellos HMAC de reportes y actas, separada de la
+    # de sesiones. Si queda vacía se usa SECRET_KEY (compatibilidad con lo ya emitido).
+    SELLO_SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
         # Sprint 6 (historia 25): sesión persistente. Con "Recordarme" el refresh token
@@ -18,6 +21,14 @@ class Settings(BaseSettings):
     TOTP_EMISOR: str = "CustodiaDigital"            # nombre que aparece en la app autenticadora
     TOTP_ROLES_OBLIGATORIO: str = "admin,fiscal"    # roles que no entran sin 2FA
     TOKEN_2FA_MIN: int = 10                         # minutos para escribir los códigos tras la contraseña
+
+    # Sprint 6 (historia 21): sello de tiempo RFC 3161 de una autoridad externa (TSA).
+    # Si TSA_URL queda vacío, los reportes y actas se emiten solo con el sello HMAC propio.
+    TSA_URL: str = "https://freetsa.org/tsr"
+    TSA_NOMBRE: str = "FreeTSA (freetsa.org)"
+    TSA_TIMEOUT_SEG: float = 8
+    TSA_CA_FILE: str = ""      # vacío → app/certs/freetsa_cacert.pem
+    TSA_CERT_FILE: str = ""    # vacío → app/certs/freetsa_tsa.crt
 
     # Sprint 6 (historia 27): tamaño máximo de una evidencia subida.
     MAX_SUBIDA_MB: int = 1024

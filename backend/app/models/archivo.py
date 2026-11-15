@@ -23,6 +23,12 @@ class Archivo(Base):
     # Nulo mientras el hash se calcula en segundo plano (archivos pesados, Sprint 2)
     hash_original = Column(String, nullable=True)
     hash_actual = Column(String, nullable=True)
+    # Sprint 6 (historia 23): hashes adicionales del ORIGINAL, para cotejar con lo que
+    # reportan Cellebrite, FTK Imager, etc. (muchos informes traen MD5 y SHA-1).
+    # El SHA-256 (hash_original) sigue siendo el que vigila la integridad.
+    hash_sha1 = Column(String, nullable=True)
+    hash_md5 = Column(String, nullable=True)
+    cotejos = Column(JSONB, nullable=True)  # historial de cotejos con herramientas externas
     metadatos = Column(JSONB, nullable=True)
         # Sprint 4 (historia 13): ficha del dispositivo de origen (IMEI, modelo, MAC, SO).
     # Se registra una sola vez y sirve de referencia en verificaciones posteriores.

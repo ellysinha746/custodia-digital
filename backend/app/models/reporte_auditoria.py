@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Integer, ForeignKey, DateTime
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, LargeBinary
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from app.db.session import Base
@@ -22,5 +22,10 @@ class ReporteAuditoria(Base):
     firma = Column(String, nullable=False)  # HMAC-SHA256 (folio | fecha | hash_contenido)
     generado_en = Column(DateTime(timezone=True), nullable=False)
     generado_por_id = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False)
+    # Sprint 6 (historia 21): sello RFC 3161 de una TSA externa sobre "folio|fecha|hash".
+    # Nulo si la TSA no respondió al emitirlo.
+    tsa_token = Column(LargeBinary, nullable=True)
+    tsa_fecha = Column(DateTime(timezone=True), nullable=True)
+    tsa_serie = Column(String, nullable=True)
 
     generado_por = relationship("Usuario")

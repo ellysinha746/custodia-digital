@@ -131,12 +131,22 @@ def notificar_alerta(alerta_id: UUID) -> None:
             destinatarios.add(settings.ALERTAS_EMAIL_ADMIN)
 
         fecha = alerta.creada_en.astimezone(timezone.utc).strftime("%d/%m/%Y %H:%M:%S UTC")
-        origen = "verificación manual" if alerta.origen == "verificacion_manual" else "escaneo automático"
+        origen = {
+            "verificacion_manual": "verificación manual",
+            "cotejo": "cotejo con herramienta forense",  # Sprint 6 (historia 23)
+        }.get(alerta.origen, "escaneo automático")
         asunto = f"[CustodiaDigital] Alerta de integridad - Caso {caso.numero_caso}"
         if alerta.tipo == "dispositivo_sustituido":
             # Sprint 4 (historia 13): la ficha del dispositivo no coincide.
             intro = "La ficha del dispositivo de origen no coincide con la registrada en la subida.\n\n"
             lineas_hash = ""
+        elif alerta.tipo == "cotejo_no_coincide":
+            # Sprint 6 (historia 23): el hash del informe de Cellebrite/FTK no es el de la evidencia.
+            intro = "El hash del informe de una herramienta forense no coincide con la evidencia custodiada.\n\n"
+            lineas_hash = (
+                f"Hash del informe:        {alerta.hash_esperado}\n"
+                f"Hash en CustodiaDigital: {alerta.hash_encontrado}\n"
+            )
         else:
             intro = "Se detectó un cambio en una evidencia sin un registro de custodia que lo respalde.\n\n"
             lineas_hash = (

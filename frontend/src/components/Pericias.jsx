@@ -530,6 +530,19 @@ function EstadoCargo({ pericia, onCambio }) {
         >
           <span className="material-symbols-outlined text-base">picture_as_pdf</span>Acta de juramento
         </button>
+        {/* Sprint 6 (historia 21): sello de tiempo RFC 3161 de una autoridad externa */}
+        {d.juramento_tsa_fecha && (
+          <button
+            onClick={() =>
+              bajar(`/designaciones-pericia/${d.id}/acta/sello-tiempo`, `sello_rfc3161_acta_${pericia.codigo}.zip`)
+                .catch(() => notificar("No se pudo descargar el sello de tiempo.", { tipo: "error" }))
+            }
+            title={`Sellada por FreeTSA el ${fecha(d.juramento_tsa_fecha)}. El paquete trae lo necesario para verificarla con OpenSSL.`}
+            className="inline-flex items-center gap-1 text-primary hover:underline"
+          >
+            <span className="material-symbols-outlined text-base">schedule</span>Sello RFC 3161
+          </button>
+        )}
       </div>
       {verTexto && (
         <div className="text-on-surface-variant">
