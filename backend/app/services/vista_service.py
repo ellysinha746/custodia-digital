@@ -35,6 +35,19 @@ def tipo_visual(archivo) -> Optional[str]:
     return None
 
 
+def tipo_por_contenido(ruta_local: str) -> Optional[str]:
+    """Sprint 7 (historia 31): 'pdf' o 'imagen' mirando los bytes (para archivos sin metadatos)."""
+    with open(ruta_local, "rb") as f:
+        if f.read(5) == b"%PDF-":
+            return "pdf"
+    try:
+        with Image.open(ruta_local) as im:
+            im.verify()
+        return "imagen"
+    except Exception:
+        return None
+
+
 @contextmanager
 def copia_local(ruta: str):
     """La evidencia (disco o S3) copiada a un temporal que se borra al terminar."""

@@ -12,6 +12,7 @@ import RolGrafotecnico, { InsigniaRol } from "../components/RolGrafotecnico";
 import CotejoGrafotecnico from "../components/CotejoGrafotecnico";
 import { esCasoGrafotecnia } from "../grafotecnia";
 import TextoOCR from "../components/TextoOCR";
+import ComparacionTexto from "../components/ComparacionTexto";
 import { puede, useUsuario } from "../permisos";
 import Pericias from "../components/Pericias";
 import { ESPECIALIDADES_INFO as ESPECIALIDADES } from "../especialidades"; // Sprint 7 (historia 28)
@@ -62,7 +63,7 @@ function badgeProcesamiento(estado) {
   return <span className="inline-flex items-center gap-1 text-amber-400 font-label-ui text-label-ui uppercase tracking-wider"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"/>Procesando</span>;
 }
 
-function FilaArchivo({ archivo, caso, onCambio }) {
+function FilaArchivo({ archivo, caso, archivos, onCambio }) {
   const [expandido, setExpandido] = useState(false);
   const [historial, setHistorial] = useState(null);
   const [verificando, setVerificando] = useState(false);
@@ -316,6 +317,9 @@ function FilaArchivo({ archivo, caso, onCambio }) {
                 onCambio={onCambio}
                 onHistorial={cargarHistorial}
               />
+
+              {/* Sprint 7 (historia 31) */}
+              <ComparacionTexto archivo={archivo} archivos={archivos} />
 
               {/* Sprint 6 (historia 23) */}
               <HashesEvidencia
@@ -676,7 +680,7 @@ export default function CasoDetalle() {
           </div>
         ) : (
           archivos.map((a) => (
-            <FilaArchivo key={a.id} archivo={a} caso={caso} onCambio={cargarTodo} />
+            <FilaArchivo key={a.id} archivo={a} caso={caso} archivos={archivos} onCambio={cargarTodo} />
           ))
         )}
       </div>

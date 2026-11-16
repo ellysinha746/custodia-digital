@@ -87,11 +87,17 @@ def _capa_de_texto(ruta_pdf: str, paginas: int) -> list:
 
 def leer_texto(archivo: Archivo) -> dict:
     """Extrae el texto de todas las páginas (hasta OCR_MAX_PAGINAS). Lanza excepción si no puede."""
-    tipo = vista_service.tipo_visual(archivo)
-    if not tipo:
-        raise HTTPException(status_code=415, detail="Solo se puede leer el texto de imágenes y PDFs.")
+    return leer_texto_de(archivo.ruta_copia_trabajo, vista_service.tipo_visual(archivo))
+
+
+def leer_texto_de(ruta_almacen: str, tipo: str = None) -> dict:
+    """Igual que leer_texto, para cualquier ruta del almacenamiento (p. ej. una versión observada,
+    historia 31). Si no se indica el tipo, se detecta por el contenido."""
     textos, confianzas, usados = [], [], set()
-    with vista_service.copia_local(archivo.ruta_copia_trabajo) as ruta:
+    with vista_service.copia_local(ruta_almacen) as ruta:
+        tipo = tipo or vista_service.tipo_por_contenido(ruta)
+        if not tipo:
+            raise HTTPException(status_code=415, detail="Solo se puede leer el texto de imágenes y PDFs.")
         if tipo == "pdf":
             total = vista_service.paginas_pdf(ruta)
             n = min(total, settings.OCR_MAX_PAGINAS)
