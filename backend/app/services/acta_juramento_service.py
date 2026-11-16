@@ -11,6 +11,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 from app.core import sello
+from app.models.usuario import ETIQUETA_ESPECIALIDAD  # Sprint 7 (historia 28)
 from app.core.config import settings
 from app.services import tsa_service  # Sprint 6 (historia 21)
 
@@ -33,7 +34,7 @@ MOTIVOS_INHIBICION = {
     "otro": "Otro motivo",
 }
 
-ETIQUETA_ESPECIALIDAD = {"audio": "audio", "video": "video", "informatica": "informática", "telefonia": "telefonía"}
+# Sprint 7 (historia 28): etiquetas centralizadas en app.models.usuario
 
 PERU = timezone(timedelta(hours=-5))
 

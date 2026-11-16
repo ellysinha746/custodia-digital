@@ -4,13 +4,7 @@ import api from "../api";
 import { limpiarSesion } from "../sesion";
 import Layout from "../components/Layout";
 import { useToast } from "../components/Toast";
-
-const ESPECIALIDADES = {
-  audio: "Audio",
-  video: "Video",
-  informatica: "Informática",
-  telefonia: "Telefonía",
-};
+import { ESPECIALIDADES } from "../especialidades"; // Sprint 7 (historia 28)
 
 export default function Papelera() {
   const [casos, setCasos] = useState([]);

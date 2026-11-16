@@ -5,13 +5,7 @@ import { limpiarSesion } from "../sesion";
 import Layout from "../components/Layout";
 import { useToast } from "../components/Toast";
 import { puede, useUsuario } from "../permisos";
-
-const ESPECIALIDADES = {
-  audio: { label: "Audio", icon: "graphic_eq" },
-  video: { label: "Video", icon: "videocam" },
-  informatica: { label: "Informática", icon: "computer" },
-  telefonia: { label: "Telefonía", icon: "smartphone" },
-};
+import { ESPECIALIDADES_INFO as ESPECIALIDADES } from "../especialidades"; // Sprint 7 (historia 28)
 
 const ESTADOS = {
   abierto: { label: "Abierto", text: "text-tertiary", dot: "bg-tertiary" },

@@ -9,6 +9,17 @@ class EspecialidadEnum(str, enum.Enum):
     video = "video"
     informatica = "informatica"
     telefonia = "telefonia"
+    grafotecnia = "grafotecnia"  # Sprint 7 (historia 28): documentos y firmas
+
+
+# Sprint 7 (historia 28): etiquetas en un solo lugar (antes estaban repetidas en varios módulos).
+ETIQUETA_ESPECIALIDAD = {
+    "audio": "audio",
+    "video": "video",
+    "informatica": "informática",
+    "telefonia": "telefonía",
+    "grafotecnia": "grafotecnia",
+}
 
 class RolEnum(str, enum.Enum):
     perito = "perito"            # Perito oficial

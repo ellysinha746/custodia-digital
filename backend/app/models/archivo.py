@@ -29,6 +29,9 @@ class Archivo(Base):
     hash_sha1 = Column(String, nullable=True)
     hash_md5 = Column(String, nullable=True)
     cotejos = Column(JSONB, nullable=True)  # historial de cotejos con herramientas externas
+    # Sprint 7 (historia 28): en grafotecnia, el documento cuestionado (dubitado) o el de
+    # autoría conocida que sirve de patrón (indubitado). Nulo = sin clasificar.
+    rol_grafotecnico = Column(String, nullable=True)
     metadatos = Column(JSONB, nullable=True)
         # Sprint 4 (historia 13): ficha del dispositivo de origen (IMEI, modelo, MAC, SO).
     # Se registra una sola vez y sirve de referencia en verificaciones posteriores.

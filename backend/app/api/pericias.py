@@ -15,7 +15,7 @@ from app.core.security import get_current_user
 from app.core.permisos import exigir, puede_ver_caso
 from app.models.caso import Caso, EstadoCasoEnum
 from app.models.pericia import Pericia, DesignacionPericia, ObservacionPericia
-from app.models.usuario import Usuario, RolEnum, EspecialidadEnum
+from app.models.usuario import Usuario, RolEnum, EspecialidadEnum, ETIQUETA_ESPECIALIDAD
 from app.services import pericia_service as reglas
 from app.services import acta_juramento_service as acta
 from app.services import tsa_service  # Sprint 6 (historia 21)
@@ -279,7 +279,7 @@ def _exigir_accion(pericia: Pericia, usuario, accion: str, mensaje: str) -> None
         raise HTTPException(status_code=409, detail=mensaje)
 
 
-ETIQUETA_ESPECIALIDAD = {"audio": "audio", "video": "video", "informatica": "informática", "telefonia": "telefonía"}
+# Sprint 7 (historia 28): etiquetas centralizadas en app.models.usuario
 
 
 def _exigir_especialidad(perito: Usuario, especialidad: Optional[str]) -> None:

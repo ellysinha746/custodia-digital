@@ -18,6 +18,7 @@ class ArchivoOut(BaseModel):
     hash_sha1: Optional[str] = None  # Sprint 6 (historia 23)
     hash_md5: Optional[str] = None
     cotejos: Optional[List[Dict[str, Any]]] = None
+    rol_grafotecnico: Optional[str] = None  # Sprint 7 (historia 28): dubitado | indubitado
     metadatos: Optional[Any] = None
     estado_procesamiento: EstadoProcesamientoEnum
     subido_en: datetime

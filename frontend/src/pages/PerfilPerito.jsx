@@ -3,11 +3,11 @@ import { useNavigate, useParams } from "react-router-dom";
 import api from "../api";
 import { limpiarSesion } from "../sesion";
 import Layout from "../components/Layout";
+import { ESPECIALIDADES } from "../especialidades"; // Sprint 7 (historia 28)
 
 // Sprint 5 (historia 19.9): perfil del perito — su carga de trabajo.
 // /perfil → el propio perito; /peritos/:id → el jefe o el fiscal viendo a otro perito.
 
-const ESPECIALIDADES = { audio: "Audio", video: "Video", informatica: "Informática", telefonia: "Telefonía" };
 
 function fecha(iso) {
   return iso ? new Date(iso).toLocaleString("es-PE", { dateStyle: "medium", timeStyle: "short" }) : "—";

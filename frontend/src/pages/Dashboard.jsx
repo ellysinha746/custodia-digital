@@ -4,19 +4,14 @@ import api from "../api";
 import { limpiarSesion } from "../sesion";
 import Layout from "../components/Layout";
 import RecordatoriosPlazo from "../components/RecordatoriosPlazo";
+import { ESPECIALIDADES } from "../especialidades"; // Sprint 7 (historia 28)
 
 // Sprint 4 (historia 18): dashboard de métricas del administrador.
-
-const ESPECIALIDADES = {
-  audio: "Audio",
-  video: "Video",
-  informatica: "Informática",
-  telefonia: "Telefonía",
-};
 
 const TIPO_ALERTA = {
   hash_sin_respaldo: "Hash sin respaldo",
   dispositivo_sustituido: "Dispositivo sustituido",
+  cotejo_no_coincide: "Cotejo con herramienta forense", // Sprint 6 (historia 23)
 };
 
 function formatoHoras(h) {

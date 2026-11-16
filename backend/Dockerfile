@@ -1,8 +1,10 @@
 FROM python:3.11-slim
 
 # Sprint 6 (historia 20): ffprobe (parte de ffmpeg) lee los metadatos de audio y video.
+# Sprint 7 (historias 28 y 29): poppler-utils convierte páginas de PDF en imagen (pdftoppm);
+# tesseract-ocr + idioma español hacen el OCR DENTRO del servidor (nada sale del laboratorio).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg \
+    && apt-get install -y --no-install-recommends ffmpeg poppler-utils tesseract-ocr tesseract-ocr-spa \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

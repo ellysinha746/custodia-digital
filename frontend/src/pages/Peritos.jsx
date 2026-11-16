@@ -3,10 +3,10 @@ import { useNavigate } from "react-router-dom";
 import api from "../api";
 import { limpiarSesion } from "../sesion";
 import Layout from "../components/Layout";
+import { ESPECIALIDADES } from "../especialidades"; // Sprint 7 (historia 28)
 
 // Sprint 5 (historia 19.2): padrón de peritos oficiales y de parte.
 
-const ESPECIALIDADES = { audio: "Audio", video: "Video", informatica: "Informática", telefonia: "Telefonía" };
 
 function Chip({ activo, onClick, children }) {
   return (
