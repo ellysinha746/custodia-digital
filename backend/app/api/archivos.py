@@ -28,6 +28,7 @@ from app.services.validacion_subida import validar_extension, copiar_con_limite,
 from app.services.hashing_service import calcular_sha256, calcular_hashes
 from app.services.integridad_service import revisar_archivo, notificar_alerta
 from app.services import cotejo_service  # Sprint 6 (historia 23)
+from app.services import ocr_service  # Sprint 7 (historia 29)
 from app.services.ficha_service import normalizar_ficha
 router = APIRouter(tags=["archivos"])
 
@@ -159,6 +160,7 @@ def subir_archivo(
         db.commit()
         db.refresh(nuevo)
         background_tasks.add_task(_procesar_hash_en_segundo_plano, nuevo.id, ruta_copia)
+        _programar_ocr(db, nuevo, usuario_actual, background_tasks)  # Sprint 7 (historia 29)
         return nuevo
 
     hashes = calcular_hashes(ruta_copia)  # Sprint 6 (historia 23): SHA-256 + SHA-1 + MD5
@@ -188,7 +190,16 @@ def subir_archivo(
     )
     db.commit()
     db.refresh(nuevo)
+    _programar_ocr(db, nuevo, usuario_actual, background_tasks)  # Sprint 7 (historia 29)
     return nuevo
+
+
+def _programar_ocr(db: Session, archivo: Archivo, usuario_actual, background_tasks: BackgroundTasks) -> None:
+    """Sprint 7 (historia 29): imágenes y PDFs se leen con OCR en segundo plano, después de responder."""
+    if settings.OCR_AUTOMATICO and ocr_service.preparar(archivo):
+        db.commit()
+        db.refresh(archivo)
+        background_tasks.add_task(ocr_service.procesar, archivo.id, usuario_actual.id)
 
 
 @router.get("/casos/{caso_id}/archivos", response_model=List[ArchivoOut])

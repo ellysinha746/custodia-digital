@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     TSA_CA_FILE: str = ""      # vacío → app/certs/freetsa_cacert.pem
     TSA_CERT_FILE: str = ""    # vacío → app/certs/freetsa_tsa.crt
 
+    # Sprint 7 (historia 29): OCR con Tesseract dentro del servidor.
+    OCR_IDIOMA: str = "spa"
+    OCR_DPI: int = 300            # resolución al convertir páginas de PDF escaneado
+    OCR_MAX_PAGINAS: int = 30     # documentos más largos: se leen las primeras N páginas
+    OCR_AUTOMATICO: bool = True   # leer el texto al subir imágenes y PDFs
+
     # Sprint 6 (historia 27): tamaño máximo de una evidencia subida.
     MAX_SUBIDA_MB: int = 1024
 

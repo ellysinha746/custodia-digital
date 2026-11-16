@@ -11,6 +11,7 @@ import HashesEvidencia from "../components/HashesEvidencia";
 import RolGrafotecnico, { InsigniaRol } from "../components/RolGrafotecnico";
 import CotejoGrafotecnico from "../components/CotejoGrafotecnico";
 import { esCasoGrafotecnia } from "../grafotecnia";
+import TextoOCR from "../components/TextoOCR";
 import { puede, useUsuario } from "../permisos";
 import Pericias from "../components/Pericias";
 import { ESPECIALIDADES_INFO as ESPECIALIDADES } from "../especialidades"; // Sprint 7 (historia 28)
@@ -307,6 +308,14 @@ function FilaArchivo({ archivo, caso, onCambio }) {
                   onHistorial={cargarHistorial}
                 />
               )}
+
+              {/* Sprint 7 (historia 29) */}
+              <TextoOCR
+                archivo={archivo}
+                puedeLeer={puede(usuario, "verificar_integridad")}
+                onCambio={onCambio}
+                onHistorial={cargarHistorial}
+              />
 
               {/* Sprint 6 (historia 23) */}
               <HashesEvidencia

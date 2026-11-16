@@ -110,12 +110,19 @@ function BuscadorGlobal() {
                   onClick={() => irACaso(a.caso_id)}
                   className="w-full text-left px-4 py-2.5 hover:bg-surface-container flex items-center gap-2.5"
                 >
-                  <span className="material-symbols-outlined text-lg text-secondary">description</span>
-                  <div className="flex flex-col">
+                  <span className="material-symbols-outlined text-lg text-secondary">
+                    {a.fragmento_texto ? "document_scanner" : "description"}
+                  </span>
+                  <div className="flex flex-col min-w-0">
                     <span className="font-body-sm text-body-sm text-on-surface">{a.nombre_original}</span>
                     <span className="font-label-code-sm text-label-code-sm text-outline">
                       Caso {a.caso_numero}
+                      {a.fragmento_texto && " · encontrado en el texto"}
                     </span>
+                    {/* Sprint 7 (historia 29): dónde aparece lo buscado dentro del texto OCR */}
+                    {a.fragmento_texto && (
+                      <span className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">{a.fragmento_texto}</span>
+                    )}
                   </div>
                 </button>
               ))}
