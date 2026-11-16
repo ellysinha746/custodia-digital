@@ -13,6 +13,7 @@ import CotejoGrafotecnico from "../components/CotejoGrafotecnico";
 import { esCasoGrafotecnia } from "../grafotecnia";
 import TextoOCR from "../components/TextoOCR";
 import ComparacionTexto from "../components/ComparacionTexto";
+import BorradorIA from "../components/BorradorIA";
 import { puede, useUsuario } from "../permisos";
 import Pericias from "../components/Pericias";
 import { ESPECIALIDADES_INFO as ESPECIALIDADES } from "../especialidades"; // Sprint 7 (historia 28)
@@ -667,6 +668,9 @@ export default function CasoDetalle() {
 
       {/* Sprint 7 (historia 28): cotejo de documentos dubitados e indubitados */}
       {esCasoGrafotecnia(caso) && <CotejoGrafotecnico archivos={archivos} />}
+
+      {/* Sprint 7 (historia 34): borrador descriptivo asistido por IA */}
+      {esCasoGrafotecnia(caso) && <BorradorIA caso={caso} archivos={archivos} />}
 
       <div className="bg-surface-container-low rounded-xl overflow-hidden">
         <div className="px-space-md py-3 flex items-center justify-between border-b border-outline-variant/20">

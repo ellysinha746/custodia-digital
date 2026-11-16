@@ -18,3 +18,5 @@ tzdata==2024.2
 boto3==1.35.36
 pyotp==2.9.0
 qrcode==7.4.2
+# Sprint 7 (historia 34): borrador descriptivo asistido por IA (Claude)
+anthropic==2.3.0

@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     OCR_MAX_PAGINAS: int = 30     # documentos más largos: se leen las primeras N páginas
     OCR_AUTOMATICO: bool = True   # leer el texto al subir imágenes y PDFs
 
+    # Sprint 7 (historia 34): borrador descriptivo asistido por IA (Claude, de Anthropic).
+    # Sin ANTHROPIC_API_KEY la función queda desactivada (nada sale del laboratorio).
+    ANTHROPIC_API_KEY: str = ""
+    IA_MODELO: str = "claude-opus-5-5"
+    IA_ESFUERZO: str = "high"
+    IA_MAX_DOCUMENTOS: int = 8
+
     # Sprint 6 (historia 27): tamaño máximo de una evidencia subida.
     MAX_SUBIDA_MB: int = 1024
 
