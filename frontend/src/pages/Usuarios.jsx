@@ -5,15 +5,9 @@ import { limpiarSesion } from "../sesion";
 import Layout from "../components/Layout";
 import { useToast } from "../components/Toast";
 import { ETIQUETAS_ROL, useUsuario } from "../permisos";
+import { ESPECIALIDADES } from "../especialidades"; // Sprint 7 (historia 28)
 
 // Sprint 5 (historia 19.1): gestión de usuarios y roles (solo jefe de laboratorio).
-
-const ESPECIALIDADES = {
-  audio: "Audio",
-  video: "Video",
-  informatica: "Informática",
-  telefonia: "Telefonía",
-};
 
 const DESCRIPCION_ROL = {
   admin: "Gestiona usuarios, ve todo, atiende alertas y el dashboard.",

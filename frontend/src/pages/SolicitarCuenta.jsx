@@ -2,11 +2,11 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api";
 import PantallaAcceso, { claseCampo } from "../components/PantallaAcceso";
+import { ESPECIALIDADES } from "../especialidades"; // Sprint 7 (historia 28)
 
 // Sprint 6 (historia 25): un perito pide su cuenta; queda pendiente hasta que
 // el jefe de laboratorio la aprueba. Nadie entra al sistema solo por registrarse.
 
-const ESPECIALIDADES = { informatica: "Informática", telefonia: "Telefonía", audio: "Audio", video: "Video" };
 
 const VACIO = {
   nombre: "", email: "", password: "", confirmar: "", rol: "perito", especialidad: "informatica",

@@ -18,6 +18,14 @@ class ArchivoOut(BaseModel):
     hash_sha1: Optional[str] = None  # Sprint 6 (historia 23)
     hash_md5: Optional[str] = None
     cotejos: Optional[List[Dict[str, Any]]] = None
+    rol_grafotecnico: Optional[str] = None  # Sprint 7 (historia 28): dubitado | indubitado
+    # Sprint 7 (historia 29): estado del OCR (el texto completo va en GET /archivos/{id}/ocr)
+    ocr_estado: Optional[str] = None
+    ocr_confianza: Optional[float] = None
+    ocr_paginas: Optional[int] = None
+    ocr_motor: Optional[str] = None
+    ocr_en: Optional[datetime] = None
+    ocr_error: Optional[str] = None
     metadatos: Optional[Any] = None
     estado_procesamiento: EstadoProcesamientoEnum
     subido_en: datetime

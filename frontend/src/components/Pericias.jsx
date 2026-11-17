@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../api";
 import { useToast } from "./Toast";
 import { puede } from "../permisos";
+import { ESPECIALIDADES } from "../especialidades"; // Sprint 7 (historia 28)
 
 // Sprint 5 (épica H19): procedimiento pericial dentro del caso.
 // El backend devuelve en `acciones` lo que el usuario puede hacer en cada pericia;
@@ -118,7 +119,6 @@ function Pasos({ estado }) {
 }
 
 /* ----------------------------------------------------------- formularios */
-const ESPECIALIDADES = { audio: "Audio", video: "Video", informatica: "Informática", telefonia: "Telefonía" };
 
 function FormDesignar({ caso, onListo, onCancelar }) {
   const casoId = caso.id;

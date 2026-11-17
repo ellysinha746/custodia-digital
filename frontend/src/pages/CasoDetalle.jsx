@@ -8,15 +8,15 @@ import FichaDispositivo, { CamposFicha } from "../components/FichaDispositivo";
 import VersionesObservadas from "../components/VersionesObservadas";
 import MetadatosTecnicos from "../components/MetadatosTecnicos";
 import HashesEvidencia from "../components/HashesEvidencia";
+import RolGrafotecnico, { InsigniaRol } from "../components/RolGrafotecnico";
+import CotejoGrafotecnico from "../components/CotejoGrafotecnico";
+import { esCasoGrafotecnia } from "../grafotecnia";
+import TextoOCR from "../components/TextoOCR";
+import ComparacionTexto from "../components/ComparacionTexto";
+import BorradorIA from "../components/BorradorIA";
 import { puede, useUsuario } from "../permisos";
 import Pericias from "../components/Pericias";
-
-const ESPECIALIDADES = {
-  audio: { label: "Audio", icon: "graphic_eq" },
-  video: { label: "Video", icon: "videocam" },
-  informatica: { label: "Informática", icon: "computer" },
-  telefonia: { label: "Telefonía", icon: "smartphone" },
-};
+import { ESPECIALIDADES_INFO as ESPECIALIDADES } from "../especialidades"; // Sprint 7 (historia 28)
 
 const ESTADOS_CASO = {
   abierto: { label: "Abierto", text: "text-tertiary", dot: "bg-tertiary", siguiente: "en_proceso" },
@@ -42,6 +42,12 @@ const CAMPOS_METADATOS = {
     { clave: "imei", etiqueta: "IMEI" },
     { clave: "operador", etiqueta: "Operador" },
   ],
+  // Sprint 7 (historia 28)
+  grafotecnia: [
+    { clave: "tipo_documento", etiqueta: "Tipo de documento" },
+    { clave: "soporte", etiqueta: "Soporte (original, copia, escaneo)" },
+    { clave: "firmante", etiqueta: "Firmante atribuido" },
+  ],
 };
 
 const ACCION_INFO = {
@@ -58,7 +64,7 @@ function badgeProcesamiento(estado) {
   return <span className="inline-flex items-center gap-1 text-amber-400 font-label-ui text-label-ui uppercase tracking-wider"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"/>Procesando</span>;
 }
 
-function FilaArchivo({ archivo, caso, onCambio }) {
+function FilaArchivo({ archivo, caso, archivos, onCambio }) {
   const [expandido, setExpandido] = useState(false);
   const [historial, setHistorial] = useState(null);
   const [verificando, setVerificando] = useState(false);
@@ -182,6 +188,7 @@ function FilaArchivo({ archivo, caso, onCambio }) {
             <span className="hidden sm:inline">Extensión falsa</span>
           </span>
         )}
+        {esCasoGrafotecnia(caso) && <InsigniaRol rol={archivo.rol_grafotecnico} />}
         {badgeProcesamiento(archivo.estado_procesamiento)}
         <span className="font-label-code-sm text-label-code-sm text-outline hidden sm:block">
           {archivo.hash_actual ? `${archivo.hash_actual.slice(0, 10)}…` : "—"}
@@ -293,6 +300,27 @@ function FilaArchivo({ archivo, caso, onCambio }) {
                   <p className="font-body-sm text-body-sm text-outline">Sin metadatos registrados.</p>
                 )}
               </div>
+
+              {/* Sprint 7 (historia 28) */}
+              {esCasoGrafotecnia(caso) && (
+                <RolGrafotecnico
+                  archivo={archivo}
+                  puedeEditar={puedeEscribir && puede(usuario, "editar_metadatos")}
+                  onCambio={onCambio}
+                  onHistorial={cargarHistorial}
+                />
+              )}
+
+              {/* Sprint 7 (historia 29) */}
+              <TextoOCR
+                archivo={archivo}
+                puedeLeer={puede(usuario, "verificar_integridad")}
+                onCambio={onCambio}
+                onHistorial={cargarHistorial}
+              />
+
+              {/* Sprint 7 (historia 31) */}
+              <ComparacionTexto archivo={archivo} archivos={archivos} />
 
               {/* Sprint 6 (historia 23) */}
               <HashesEvidencia
@@ -638,6 +666,12 @@ export default function CasoDetalle() {
       {/* Sprint 5 (épica H19): procedimiento pericial */}
       <Pericias caso={caso} usuario={usuario} />
 
+      {/* Sprint 7 (historia 28): cotejo de documentos dubitados e indubitados */}
+      {esCasoGrafotecnia(caso) && <CotejoGrafotecnico archivos={archivos} />}
+
+      {/* Sprint 7 (historia 34): borrador descriptivo asistido por IA */}
+      {esCasoGrafotecnia(caso) && <BorradorIA caso={caso} archivos={archivos} />}
+
       <div className="bg-surface-container-low rounded-xl overflow-hidden">
         <div className="px-space-md py-3 flex items-center justify-between border-b border-outline-variant/20">
           <h2 className="font-headline-sm text-headline-sm text-on-surface">Archivos del caso</h2>
@@ -650,7 +684,7 @@ export default function CasoDetalle() {
           </div>
         ) : (
           archivos.map((a) => (
-            <FilaArchivo key={a.id} archivo={a} caso={caso} onCambio={cargarTodo} />
+            <FilaArchivo key={a.id} archivo={a} caso={caso} archivos={archivos} onCambio={cargarTodo} />
           ))
         )}
       </div>

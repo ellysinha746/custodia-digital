@@ -3,12 +3,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, casos, archivos, auditoria, busqueda, alertas, fichas, observadas, reportes, metricas, usuarios, peritos, pericias, recordatorios
+from app.api import auth, casos, archivos, auditoria, busqueda, alertas, fichas, observadas, reportes, metricas, usuarios, peritos, pericias, recordatorios, grafotecnia, documentos, borradores_ia
 from app.core.config import settings
 from app.core.cabeceras import cabeceras_seguridad
 from app.services.integridad_service import escanear_todos, notificar_alerta
 from app.services.recordatorio_service import enviar_recordatorios
 from app.services.storage_service import preparar_almacenamiento
+from app.services import ocr_service
 
 
 async def _bucle_escaneo_integridad():
@@ -44,6 +45,12 @@ async def lifespan(app: FastAPI):
         await asyncio.to_thread(preparar_almacenamiento)  # Sprint 6 (historia 22)
     except Exception as e:
         print(f"[almacenamiento] No se pudo preparar el bucket S3: {e}", flush=True)
+    try:  # Sprint 7 (historia 29): un OCR cortado por un reinicio queda para reintentar
+        n = await asyncio.to_thread(ocr_service.recuperar_interrumpidos)
+        if n:
+            print(f"[ocr] {n} lectura(s) interrumpidas por el reinicio; quedan para reintentar", flush=True)
+    except Exception as e:
+        print(f"[ocr] No se pudo revisar lecturas interrumpidas: {e}", flush=True)
     tareas = [
         asyncio.create_task(_bucle_escaneo_integridad()),
         asyncio.create_task(_bucle_recordatorios()),
@@ -81,6 +88,9 @@ app.include_router(usuarios.router)
 app.include_router(peritos.router)
 app.include_router(pericias.router)
 app.include_router(recordatorios.router)
+app.include_router(grafotecnia.router)  # Sprint 7 (historia 28)
+app.include_router(documentos.router)  # Sprint 7 (historias 29 y 31)
+app.include_router(borradores_ia.router)  # Sprint 7 (historia 34)
 
 @app.get("/")
 def root():

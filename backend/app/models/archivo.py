@@ -1,6 +1,6 @@
 import uuid
 import enum
-from sqlalchemy import Column, String, Enum, ForeignKey, DateTime, func
+from sqlalchemy import Column, String, Enum, ForeignKey, DateTime, Text, Float, Integer, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from app.db.session import Base
@@ -29,6 +29,19 @@ class Archivo(Base):
     hash_sha1 = Column(String, nullable=True)
     hash_md5 = Column(String, nullable=True)
     cotejos = Column(JSONB, nullable=True)  # historial de cotejos con herramientas externas
+    # Sprint 7 (historia 28): en grafotecnia, el documento cuestionado (dubitado) o el de
+    # autoría conocida que sirve de patrón (indubitado). Nulo = sin clasificar.
+    rol_grafotecnico = Column(String, nullable=True)
+    # Sprint 7 (historia 29): texto extraído de PDFs e imágenes (OCR con Tesseract, en el servidor).
+    #   ocr_estado: pendiente | procesando | listo | sin_texto | error  (nulo = no aplica)
+    #   ocr_texto: páginas separadas por un salto de página (\f)
+    ocr_estado = Column(String, nullable=True)
+    ocr_texto = Column(Text, nullable=True)
+    ocr_confianza = Column(Float, nullable=True)   # promedio 0-100 (None si vino de la capa de texto del PDF)
+    ocr_paginas = Column(Integer, nullable=True)
+    ocr_motor = Column(String, nullable=True)      # p. ej. "tesseract 5.5.0 (spa)" o "capa de texto del PDF"
+    ocr_en = Column(DateTime(timezone=True), nullable=True)
+    ocr_error = Column(String, nullable=True)
     metadatos = Column(JSONB, nullable=True)
         # Sprint 4 (historia 13): ficha del dispositivo de origen (IMEI, modelo, MAC, SO).
     # Se registra una sola vez y sirve de referencia en verificaciones posteriores.
