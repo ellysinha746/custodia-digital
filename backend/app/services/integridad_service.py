@@ -13,6 +13,7 @@ from app.models.usuario import Usuario, RolEnum
 from app.models.alerta import Alerta
 from app.services.hashing_service import calcular_sha256
 from app.services.correo_service import enviar_correo
+from app.services.telegram_service import enviar_telegram
 from app.services.storage_service import existe
 
 
@@ -164,7 +165,19 @@ def notificar_alerta(alerta_id: UUID) -> None:
             f"{alerta.detalle}\n\n"
             "Revisa la sección Alertas de CustodiaDigital para investigar y marcarla como atendida."
         )
-
+                # Sprint 7 (historia 33): aviso corto por Telegram (sin nombres de archivo ni hashes).
+        tipo_corto = {
+            "dispositivo_sustituido": "Posible sustitución del dispositivo de origen",
+            "cotejo_no_coincide": "El hash de un informe forense no coincide",
+        }.get(alerta.tipo, "Cambio de hash sin respaldo de custodia")
+        enviar_telegram(
+            f"⚠️ Alerta de integridad\n"
+            f"Tipo: {tipo_corto}\n"
+            f"Caso: {caso.numero_caso}\n"
+            f"Detectado por: {origen}\n"
+            f"Fecha: {fecha}\n\n"
+            "Revisa la sección Alertas de CustodiaDigital."
+        )
         if enviar_correo(destinatarios, asunto, cuerpo):
             alerta.correo_enviado = True
             db.commit()

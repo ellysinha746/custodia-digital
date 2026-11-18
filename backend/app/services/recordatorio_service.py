@@ -20,6 +20,7 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.pericia import Pericia, RecordatorioPlazo
 from app.services.correo_service import enviar_correo
+from app.services.telegram_service import enviar_telegram
 
 LIMA = ZoneInfo("America/Lima")
 
@@ -129,6 +130,14 @@ def enviar_recordatorios() -> int:
                 continue
             asunto = f"[CustodiaDigital] Plazo por vencer: {TITULOS[tipo]} - {p.codigo}"
             enviar_correo(correos, asunto, _cuerpo(p, tipo, vence, ahora))
+                        # Sprint 7 (historia 33): también al grupo del laboratorio en Telegram.
+            enviar_telegram(
+                f"⏰ Plazo por vencer\n"
+                f"{TITULOS[tipo]}\n"
+                f"Pericia: {p.codigo} (caso {p.caso.numero_caso})\n"
+                f"Vence: {_fecha(vence)}\n"
+                f"Quedan: {_tiempo_restante(vence, ahora)}"
+            )
             enviados += 1
     finally:
         db.close()

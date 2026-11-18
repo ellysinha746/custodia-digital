@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, casos, archivos, auditoria, busqueda, alertas, fichas, observadas, reportes, metricas, usuarios, peritos, pericias, recordatorios, grafotecnia, documentos, borradores_ia
+from app.api import auth, casos, archivos, auditoria, busqueda, alertas, fichas, observadas, reportes, metricas, usuarios, peritos, pericias, recordatorios, grafotecnia, documentos, borradores_ia, telegram
 from app.core.config import settings
 from app.core.cabeceras import cabeceras_seguridad
 from app.services.integridad_service import escanear_todos, notificar_alerta
@@ -91,6 +91,7 @@ app.include_router(recordatorios.router)
 app.include_router(grafotecnia.router)  # Sprint 7 (historia 28)
 app.include_router(documentos.router)  # Sprint 7 (historias 29 y 31)
 app.include_router(borradores_ia.router)  # Sprint 7 (historia 34)
+app.include_router(telegram.router)  # Sprint 7 (historia 33)
 
 @app.get("/")
 def root():
