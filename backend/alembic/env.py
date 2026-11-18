@@ -5,7 +5,7 @@ from sqlalchemy import pool
 
 from alembic import context
 from app.db.session import Base
-from app.models import usuario, caso, archivo, log_custodia, alerta, version_observada, reporte_auditoria, pericia
+from app.models import usuario, caso, archivo, log_custodia, alerta, version_observada, reporte_auditoria, pericia, analisis_firma
 from app.core.config import settings
 
 target_metadata = Base.metadata
