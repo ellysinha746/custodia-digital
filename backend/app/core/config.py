@@ -66,10 +66,14 @@ class Settings(BaseSettings):
     SMTP_FROM: str = ""
     SMTP_TLS: bool = True
     ALERTAS_EMAIL_ADMIN: str = ""
-    
+
     # Sprint 7 (historia 33): alertas también por Telegram. Sin token, queda desactivado.
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_CHAT_ID: str = ""   # id del grupo del laboratorio (suele ser negativo: -100...)
+
+    # Sprint 7 (historia 32): dirección con la que se abren los QR de verificación pública.
+    # En la demo con celular: http://<IP-de-la-PC-en-la-red>:8000 (localhost no sirve en el celular).
+    PUBLICO_BASE_URL: str = "http://localhost:8000"
     
     # Sprint 6 (historia 26): recordatorio de plazos por vencer.
     RECORDATORIO_DIAS_ANTES: float = 2      # avisar cuando falten estos días o menos

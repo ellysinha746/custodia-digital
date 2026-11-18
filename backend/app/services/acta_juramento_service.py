@@ -14,6 +14,7 @@ from app.core import sello
 from app.models.usuario import ETIQUETA_ESPECIALIDAD  # Sprint 7 (historia 28)
 from app.core.config import settings
 from app.services import tsa_service  # Sprint 6 (historia 21)
+from app.services.verificacion_publica import dibujo_qr, url_acta  # Sprint 7 (historia 32)
 
 # Sprint 5: acta de aceptación del cargo y juramento del perito oficial (CPP art. 174).
 # El texto jurado se guarda tal cual; su SHA-256 y una firma HMAC del servidor
@@ -171,5 +172,18 @@ def generar_pdf(designacion) -> bytes:
             ParagraphStyle("i", parent=chico, textColor=colors.HexColor("#1b7f3b" if integro else "#b3261e")),
         ),
     ]
+
+    # Sprint 7 (historia 32): QR de verificación pública (se escanea con el celular).
+    url = url_acta(designacion.id)
+    qr = Table(
+        [[dibujo_qr(url), Paragraph(
+            "<b>Verificación pública</b><br/>Escanea este código con el celular para comprobar que el acta "
+            "está registrada en CustodiaDigital y no fue modificada desde el juramento. "
+            f"La página no muestra datos del caso ni del perito.<br/><font name=\"Courier\">{url}</font>", chico)]],
+        colWidths=[30 * mm, None],
+    )
+    qr.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LEFTPADDING", (0, 0), (0, 0), 0)]))
+    contenido += [Spacer(1, 6 * mm), qr]
+
     doc.build(contenido)
     return buffer.getvalue()
