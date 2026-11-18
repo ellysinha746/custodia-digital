@@ -67,6 +67,10 @@ class Settings(BaseSettings):
     SMTP_TLS: bool = True
     ALERTAS_EMAIL_ADMIN: str = ""
     
+    # Sprint 7 (historia 33): alertas también por Telegram. Sin token, queda desactivado.
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_CHAT_ID: str = ""   # id del grupo del laboratorio (suele ser negativo: -100...)
+    
     # Sprint 6 (historia 26): recordatorio de plazos por vencer.
     RECORDATORIO_DIAS_ANTES: float = 2      # avisar cuando falten estos días o menos
     RECORDATORIOS_CADA_MIN: float = 60      # cada cuánto se revisan los plazos
