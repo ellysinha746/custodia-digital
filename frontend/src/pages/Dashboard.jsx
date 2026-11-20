@@ -4,6 +4,7 @@ import api from "../api";
 import { limpiarSesion } from "../sesion";
 import Layout from "../components/Layout";
 import RecordatoriosPlazo from "../components/RecordatoriosPlazo";
+import EstadoTelegram from "../components/EstadoTelegram";
 import { ESPECIALIDADES } from "../especialidades"; // Sprint 7 (historia 28)
 
 // Sprint 4 (historia 18): dashboard de métricas del administrador.
@@ -224,6 +225,8 @@ export default function Dashboard() {
           </div>
           
           <RecordatoriosPlazo />
+          
+          <EstadoTelegram />
         </div>
       )}
     </Layout>

@@ -20,3 +20,5 @@ pyotp==2.9.0
 qrcode==7.4.2
 # Sprint 7 (historia 34): borrador descriptivo asistido por IA (Claude)
 anthropic==2.3.0
+# Sprint 7 (historia 30): análisis comparativo de firmas (versión sin interfaz gráfica, para servidor)
+opencv-python-headless==5.1.0.95

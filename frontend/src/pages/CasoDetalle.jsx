@@ -14,6 +14,7 @@ import { esCasoGrafotecnia } from "../grafotecnia";
 import TextoOCR from "../components/TextoOCR";
 import ComparacionTexto from "../components/ComparacionTexto";
 import BorradorIA from "../components/BorradorIA";
+import AnalisisFirmas from "../components/AnalisisFirmas";
 import { puede, useUsuario } from "../permisos";
 import Pericias from "../components/Pericias";
 import { ESPECIALIDADES_INFO as ESPECIALIDADES } from "../especialidades"; // Sprint 7 (historia 28)
@@ -668,6 +669,9 @@ export default function CasoDetalle() {
 
       {/* Sprint 7 (historia 28): cotejo de documentos dubitados e indubitados */}
       {esCasoGrafotecnia(caso) && <CotejoGrafotecnico archivos={archivos} />}
+
+      {/* Sprint 7 (historia 30): análisis comparativo de firmas con OpenCV */}
+      {esCasoGrafotecnia(caso) && <AnalisisFirmas caso={caso} archivos={archivos} />}
 
       {/* Sprint 7 (historia 34): borrador descriptivo asistido por IA */}
       {esCasoGrafotecnia(caso) && <BorradorIA caso={caso} archivos={archivos} />}

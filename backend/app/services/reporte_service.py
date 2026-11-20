@@ -12,6 +12,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 from app.core import sello
+from app.services.verificacion_publica import dibujo_qr, url_reporte  # Sprint 7 (historia 32)
 
 # Sprint 4 (historia 16): reporte de auditoría con sello de tiempo.
 #
@@ -163,6 +164,18 @@ def generar_pdf(eventos: List[Dict], meta: Dict) -> bytes:
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ]))
     historia.append(sello)
+
+    # Sprint 7 (historia 32): QR de verificación pública (se escanea con el celular).
+    url = url_reporte(meta["folio"])
+    qr = Table(
+        [[dibujo_qr(url), Paragraph(
+            "<b>VERIFICACIÓN PÚBLICA</b><br/>Escanea este código con el celular para comprobar que el "
+            "reporte fue emitido por CustodiaDigital y que sus sellos siguen siendo válidos. "
+            f"La página no muestra datos del caso.<br/><font name=\"Courier\">{url}</font>", celda)]],
+        colWidths=[30 * mm, None],
+    )
+    qr.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LEFTPADDING", (0, 0), (0, 0), 0)]))
+    historia += [Spacer(1, 5 * mm), qr]
 
     def pie(canvas, documento):
         canvas.saveState()
