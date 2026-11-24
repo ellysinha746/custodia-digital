@@ -26,7 +26,9 @@ export default function Papelera() {
     }
   };
 
+  // Sprint 8 (historia 37): carga los datos desde la API al entrar.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

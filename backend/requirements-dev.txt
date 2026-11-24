@@ -1,0 +1,4 @@
+# Sprint 8 (historia 37): dependencias solo para las pruebas automáticas (no van en la imagen de producción).
+-r requirements.txt
+pytest==8.3.3
+httpx==0.27.2

@@ -48,7 +48,9 @@ export default function Auditoria() {
     }
   };
 
+  // Sprint 8 (historia 37): carga los datos desde la API al entrar o cambiar el filtro.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     cargar(filtro || undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtro]);

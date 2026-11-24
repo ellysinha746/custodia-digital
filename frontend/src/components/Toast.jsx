@@ -64,6 +64,8 @@ export function ToastProvider({ children }) {
   );
 }
 
+// Sprint 8 (historia 37): el hook vive junto a su proveedor a propósito; solo afecta la recarga en caliente.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useToast() {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error("useToast debe usarse dentro de <ToastProvider>");
