@@ -3,13 +3,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, casos, archivos, auditoria, busqueda, alertas, fichas, observadas, reportes, metricas, usuarios, peritos, pericias, recordatorios, grafotecnia, documentos, borradores_ia, telegram, publico, firmas, blockchain
+from app.api import auth, casos, archivos, auditoria, busqueda, alertas, fichas, observadas, reportes, metricas, usuarios, peritos, pericias, recordatorios, grafotecnia, documentos, borradores_ia, telegram, publico, firmas, blockchain, transcripciones
 from app.core.config import settings
 from app.core.cabeceras import cabeceras_seguridad
 from app.services.integridad_service import escanear_todos, notificar_alerta
 from app.services.recordatorio_service import enviar_recordatorios
 from app.services.storage_service import preparar_almacenamiento
-from app.services import ocr_service
+from app.services import ocr_service, transcripcion_service
 from app.services import blockchain_service
 from app.db.session import SessionLocal
 
@@ -74,6 +74,12 @@ async def lifespan(app: FastAPI):
             print(f"[ocr] {n} lectura(s) interrumpidas por el reinicio; quedan para reintentar", flush=True)
     except Exception as e:
         print(f"[ocr] No se pudo revisar lecturas interrumpidas: {e}", flush=True)
+    try:  # Sprint 8 (historia 40): igual con las transcripciones
+        n = await asyncio.to_thread(transcripcion_service.recuperar_interrumpidos)
+        if n:
+            print(f"[whisper] {n} transcripción(es) interrumpidas por el reinicio; quedan para reintentar", flush=True)
+    except Exception as e:
+        print(f"[whisper] No se pudo revisar transcripciones interrumpidas: {e}", flush=True)
     tareas = [
         asyncio.create_task(_bucle_escaneo_integridad()),
         asyncio.create_task(_bucle_recordatorios()),
@@ -120,6 +126,7 @@ app.include_router(telegram.router)  # Sprint 7 (historia 33)
 app.include_router(publico.router)  # Sprint 7 (historia 32): verificación pública por QR
 app.include_router(firmas.router)  # Sprint 7 (historia 30): análisis de firmas con OpenCV
 app.include_router(blockchain.router)  # Sprint 8 (historia 39): anclaje en Bitcoin (OpenTimestamps)
+app.include_router(transcripciones.router)  # Sprint 8 (historia 40): transcripción con Whisper
 
 @app.get("/")
 def root():

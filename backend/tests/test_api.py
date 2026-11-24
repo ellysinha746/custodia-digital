@@ -33,3 +33,8 @@ def test_blockchain_pide_sesion():
     # Sprint 8 (historia 39)
     assert cliente.get("/blockchain/anclajes").status_code == 401
     assert cliente.post("/blockchain/anclajes").status_code == 401
+
+
+def test_transcripcion_pide_sesion():
+    # Sprint 8 (historia 40)
+    assert cliente.get("/archivos/00000000-0000-0000-0000-000000000000/transcripcion").status_code == 401

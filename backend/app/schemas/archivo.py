@@ -26,6 +26,12 @@ class ArchivoOut(BaseModel):
     ocr_motor: Optional[str] = None
     ocr_en: Optional[datetime] = None
     ocr_error: Optional[str] = None
+    # Sprint 8 (historia 40): estado de la transcripción (el texto va en GET /archivos/{id}/transcripcion)
+    transcripcion_estado: Optional[str] = None
+    transcripcion_duracion: Optional[float] = None
+    transcripcion_motor: Optional[str] = None
+    transcripcion_en: Optional[datetime] = None
+    transcripcion_error: Optional[str] = None
     metadatos: Optional[Any] = None
     estado_procesamiento: EstadoProcesamientoEnum
     subido_en: datetime

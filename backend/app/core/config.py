@@ -79,6 +79,13 @@ class Settings(BaseSettings):
     BLOCKCHAIN_AUTOMATICO: bool = True     # anclar solo cada BLOCKCHAIN_CADA_HORAS si hay registros nuevos
     BLOCKCHAIN_CADA_HORAS: float = 24
     BLOCKCHAIN_TIMEOUT_SEG: float = 10
+
+    # Sprint 8 (historia 40): transcripción de audio y video con Whisper (faster-whisper), local.
+    WHISPER_MODELO: str = "base"          # tiny | base | small | medium (más grande = mejor y más lento)
+    WHISPER_IDIOMA: str = "es"            # vacío = detectar el idioma
+    WHISPER_DIR: str = "/modelos"         # el modelo se descarga UNA vez y queda en este volumen
+    WHISPER_AUTOMATICO: bool = True       # transcribir al subir audio o video
+    WHISPER_MAX_MINUTOS: float = 60       # audios más largos se transcriben a pedido
     
     # Sprint 6 (historia 26): recordatorio de plazos por vencer.
     RECORDATORIO_DIAS_ANTES: float = 2      # avisar cuando falten estos días o menos

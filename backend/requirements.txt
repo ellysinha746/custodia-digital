@@ -26,3 +26,6 @@ opencv-python-headless==5.1.0.95
 opentimestamps==0.5.0
 python-bitcoinlib==0.12.2
 pycryptodomex==3.24.2
+# Sprint 8 (historia 40): transcripción de audio y video con Whisper, local (sin enviar el audio a nadie)
+faster-whisper==1.2.1
+av==18.1.1  # lector de audio de faster-whisper; av 19 cambió open() y rompe decode_audio
