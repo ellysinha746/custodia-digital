@@ -31,6 +31,9 @@ const PERMISOS = {
   gestionar_pericias: ["admin", "fiscal"],
   ver_padron: ["admin", "fiscal"],
   ver_perfil_ajeno: ["admin", "fiscal"],
+  // Sprint 8 (historia 39): anclaje del historial en blockchain
+  anclar_blockchain: ["admin"],
+  ver_blockchain: ["admin", "fiscal"],
 };
 
 export const ES_PERITO = (usuario) => !!usuario && ["perito", "perito_parte"].includes(usuario.rol);

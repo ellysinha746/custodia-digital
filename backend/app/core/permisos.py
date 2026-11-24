@@ -43,6 +43,9 @@ PERMISOS = {
     "gestionar_pericias": {ADMIN, FISCAL},
     "ver_padron": {ADMIN, FISCAL, PERITO, PERITO_PARTE},
     "ver_perfil_ajeno": {ADMIN, FISCAL},
+    # Sprint 8 (historia 39): anclaje del historial en blockchain.
+    "anclar_blockchain": {ADMIN},
+    "ver_blockchain": {ADMIN, FISCAL},
 }
 
 # Roles que ven TODOS los casos (en modo lectura en el caso del fiscal).

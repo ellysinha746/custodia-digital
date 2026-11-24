@@ -22,3 +22,7 @@ qrcode==7.4.2
 anthropic==2.3.0
 # Sprint 7 (historia 30): análisis comparativo de firmas (versión sin interfaz gráfica, para servidor)
 opencv-python-headless==5.1.0.95
+# Sprint 8 (historia 39): anclaje del historial de custodia en Bitcoin (OpenTimestamps)
+opentimestamps==0.5.0
+python-bitcoinlib==0.12.2
+pycryptodomex==3.24.2

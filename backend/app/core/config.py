@@ -74,6 +74,11 @@ class Settings(BaseSettings):
     # Sprint 7 (historia 32): dirección con la que se abren los QR de verificación pública.
     # En la demo con celular: http://<IP-de-la-PC-en-la-red>:8000 (localhost no sirve en el celular).
     PUBLICO_BASE_URL: str = "http://localhost:8000"
+
+    # Sprint 8 (historia 39): anclaje del historial de custodia en Bitcoin con OpenTimestamps.
+    BLOCKCHAIN_AUTOMATICO: bool = True     # anclar solo cada BLOCKCHAIN_CADA_HORAS si hay registros nuevos
+    BLOCKCHAIN_CADA_HORAS: float = 24
+    BLOCKCHAIN_TIMEOUT_SEG: float = 10
     
     # Sprint 6 (historia 26): recordatorio de plazos por vencer.
     RECORDATORIO_DIAS_ANTES: float = 2      # avisar cuando falten estos días o menos

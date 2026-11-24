@@ -3,13 +3,15 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, casos, archivos, auditoria, busqueda, alertas, fichas, observadas, reportes, metricas, usuarios, peritos, pericias, recordatorios, grafotecnia, documentos, borradores_ia, telegram, publico, firmas
+from app.api import auth, casos, archivos, auditoria, busqueda, alertas, fichas, observadas, reportes, metricas, usuarios, peritos, pericias, recordatorios, grafotecnia, documentos, borradores_ia, telegram, publico, firmas, blockchain
 from app.core.config import settings
 from app.core.cabeceras import cabeceras_seguridad
 from app.services.integridad_service import escanear_todos, notificar_alerta
 from app.services.recordatorio_service import enviar_recordatorios
 from app.services.storage_service import preparar_almacenamiento
 from app.services import ocr_service
+from app.services import blockchain_service
+from app.db.session import SessionLocal
 
 
 async def _bucle_escaneo_integridad():
@@ -39,6 +41,27 @@ async def _bucle_recordatorios():
         await asyncio.sleep(settings.RECORDATORIOS_CADA_MIN * 60)
 
 
+def _anclaje_automatico() -> str:
+    db = SessionLocal()
+    try:
+        return blockchain_service.tarea_automatica(db)
+    finally:
+        db.close()
+
+
+async def _bucle_blockchain():
+    """Sprint 8 (historia 39): cada hora actualiza los anclajes pendientes y, una vez al día
+    (BLOCKCHAIN_CADA_HORAS), ancla el historial si hubo registros nuevos."""
+    await asyncio.sleep(60)  # deja que la API termine de arrancar
+    while True:
+        try:
+            resultado = await asyncio.to_thread(_anclaje_automatico)
+            print(f"[blockchain] {resultado}", flush=True)
+        except Exception as e:  # sin internet, calendario caído...: se reintenta en la próxima vuelta
+            print(f"[blockchain] Error: {e}", flush=True)
+        await asyncio.sleep(3600)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -55,6 +78,8 @@ async def lifespan(app: FastAPI):
         asyncio.create_task(_bucle_escaneo_integridad()),
         asyncio.create_task(_bucle_recordatorios()),
     ]
+    if settings.BLOCKCHAIN_AUTOMATICO:
+        tareas.append(asyncio.create_task(_bucle_blockchain()))
     yield
     for tarea in tareas:
         tarea.cancel()
@@ -94,6 +119,7 @@ app.include_router(borradores_ia.router)  # Sprint 7 (historia 34)
 app.include_router(telegram.router)  # Sprint 7 (historia 33)
 app.include_router(publico.router)  # Sprint 7 (historia 32): verificación pública por QR
 app.include_router(firmas.router)  # Sprint 7 (historia 30): análisis de firmas con OpenCV
+app.include_router(blockchain.router)  # Sprint 8 (historia 39): anclaje en Bitcoin (OpenTimestamps)
 
 @app.get("/")
 def root():

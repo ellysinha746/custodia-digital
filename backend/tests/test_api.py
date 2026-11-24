@@ -27,3 +27,9 @@ def test_qr_de_folio_inventado_dice_no_registrado():
     assert "Documento no registrado" in r.text
     assert r.headers["cache-control"] == "no-store"
     assert r.headers["x-robots-tag"] == "noindex"
+
+
+def test_blockchain_pide_sesion():
+    # Sprint 8 (historia 39)
+    assert cliente.get("/blockchain/anclajes").status_code == 401
+    assert cliente.post("/blockchain/anclajes").status_code == 401
