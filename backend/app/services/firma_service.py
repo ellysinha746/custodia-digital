@@ -71,6 +71,16 @@ def preparar(imagen: Image.Image) -> np.ndarray:
     gris = cv2.GaussianBlur(gris, (5, 5), 0)
     _, binaria = cv2.threshold(gris, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
+    # Sprint 8 (historia 41): quitar la raya recta donde se firma ("________"). Solo líneas
+    # perfectamente horizontales, delgadas y que cruzan más del 60 % del recorte: un trazo
+    # de la firma, aunque sea largo, no es tan recto ni tan delgado.
+    lineas = cv2.morphologyEx(binaria, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_RECT, (max(30, int(binaria.shape[1] * 0.6)), 1)))
+    n, etiquetas, stats, _ = cv2.connectedComponentsWithStats(lineas, 8)
+    grosor_max = max(3, int(binaria.shape[0] * 0.03))
+    for i in range(1, n):
+        if stats[i, cv2.CC_STAT_HEIGHT] <= grosor_max:
+            binaria[cv2.dilate((etiquetas == i).astype(np.uint8), np.ones((3, 3), np.uint8)) > 0] = 0
+
     # Quitar manchas pequeñas (polvo, textura del papel).
     n, etiquetas, stats, _ = cv2.connectedComponentsWithStats(binaria, 8)
     area_minima = max(20, int(0.0005 * binaria.size))

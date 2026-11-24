@@ -8,11 +8,11 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.api.archivos import _obtener_caso, _obtener_caso_editable
+from app.api.archivos import _obtener_archivo, _obtener_caso, _obtener_caso_editable
 from app.api.grafotecnia import _caso_de_grafotecnia
 from app.core.permisos import exigir
 from app.core.security import get_current_user
@@ -20,7 +20,7 @@ from app.db.session import get_db
 from app.models.analisis_firma import AnalisisFirma
 from app.models.archivo import Archivo
 from app.models.log_custodia import LogCustodia, AccionEnum
-from app.services import firma_service, vista_service
+from app.services import firma_service, ubicacion_firma_service, vista_service
 from app.services.storage_service import existe
 
 router = APIRouter(tags=["análisis de firmas"])
@@ -133,3 +133,29 @@ def listar_analisis(caso_id: UUID, db: Session = Depends(get_db), usuario_actual
     _obtener_caso(db, caso_id, usuario_actual)
     filas = db.query(AnalisisFirma).filter(AnalisisFirma.caso_id == caso_id).order_by(AnalisisFirma.realizado_en.desc()).all()
     return [_salida(a) for a in filas]
+
+
+# Sprint 8 (historia 41): ubicar firmas automáticamente en una página.
+@router.get("/archivos/{archivo_id}/firmas/ubicar")
+def ubicar_firmas(
+    archivo_id: UUID,
+    pagina: int = Query(1, ge=1, le=5000),
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(get_current_user),
+):
+    """Sugiere las zonas de la página donde parece haber una firma (el perito confirma)."""
+    archivo = _obtener_archivo(db, archivo_id, usuario_actual)
+    tipo = vista_service.tipo_visual(archivo)
+    if not tipo:
+        raise HTTPException(status_code=415, detail="Este archivo no es una imagen ni un PDF.")
+    if not existe(archivo.ruta_copia_trabajo):
+        raise HTTPException(status_code=404, detail="La copia de trabajo ya no está en el almacenamiento.")
+    with vista_service.copia_local(archivo.ruta_copia_trabajo) as ruta:
+        imagen, total = vista_service.imagen_de_pagina(ruta, tipo, pagina, dpi=200)
+    resultado = ubicacion_firma_service.detectar(imagen)
+    db.add(LogCustodia(
+        archivo_id=archivo.id, usuario_id=usuario_actual.id, accion=AccionEnum.acceso,
+        resultado=f"ubicación automática de firmas (página {pagina} de {total}): {len(resultado['candidatos'])} zona(s)",
+    ))
+    db.commit()
+    return {"pagina": pagina, "paginas": total, **resultado}
