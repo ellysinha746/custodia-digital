@@ -4,6 +4,7 @@ import api from "../api";
 import { limpiarSesion } from "../sesion";
 import Layout from "../components/Layout";
 import ReporteAuditoria from "../components/ReporteAuditoria";
+import AnclajeBlockchain from "../components/AnclajeBlockchain";
 
 const ACCIONES = {
   subida: { label: "Subida", icono: "upload_file", color: "text-secondary" },
@@ -66,6 +67,9 @@ export default function Auditoria() {
         </div>
         <ReporteAuditoria filtro={filtro} />
       </div>
+
+      {/* Sprint 8 (historia 39): anclaje del historial en Bitcoin */}
+      <AnclajeBlockchain />
 
       <div className="flex flex-wrap gap-space-sm mb-space-md">
         <Chip activo={!filtro} onClick={() => setFiltro("")}>Todas</Chip>

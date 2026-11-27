@@ -42,6 +42,16 @@ class Archivo(Base):
     ocr_motor = Column(String, nullable=True)      # p. ej. "tesseract 5.5.0 (spa)" o "capa de texto del PDF"
     ocr_en = Column(DateTime(timezone=True), nullable=True)
     ocr_error = Column(String, nullable=True)
+    # Sprint 8 (historia 40): transcripción de audio y video con Whisper, dentro del servidor.
+    transcripcion_estado = Column(String, nullable=True)      # pendiente | procesando | listo | sin_voz | error
+    transcripcion_texto = Column(Text, nullable=True)
+    transcripcion_segmentos = Column(JSONB, nullable=True)    # [{inicio, fin, texto}] en segundos
+    transcripcion_idioma = Column(String, nullable=True)
+    transcripcion_duracion = Column(Float, nullable=True)     # segundos de audio
+    transcripcion_motor = Column(String, nullable=True)       # p. ej. "faster-whisper 1.2.1 (base, int8)"
+    transcripcion_sha256 = Column(String, nullable=True)      # huella del texto: detecta si alguien lo edita
+    transcripcion_en = Column(DateTime(timezone=True), nullable=True)
+    transcripcion_error = Column(String, nullable=True)
     metadatos = Column(JSONB, nullable=True)
         # Sprint 4 (historia 13): ficha del dispositivo de origen (IMEI, modelo, MAC, SO).
     # Se registra una sola vez y sirve de referencia en verificaciones posteriores.

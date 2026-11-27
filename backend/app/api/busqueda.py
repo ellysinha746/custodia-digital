@@ -62,6 +62,9 @@ def buscar(
     en_texto = or_(
         text("to_tsvector('spanish', coalesce(archivos.ocr_texto, '')) @@ plainto_tsquery('spanish', :q)").bindparams(q=q),
         Archivo.ocr_texto.ilike(patron),
+        # Sprint 8 (historia 40): también lo que se dijo en los audios y videos.
+        text("to_tsvector('spanish', coalesce(archivos.transcripcion_texto, '')) @@ plainto_tsquery('spanish', :q2)").bindparams(q2=q),
+        Archivo.transcripcion_texto.ilike(patron),
     )
     archivos_query = (
         db.query(Archivo, Caso)
@@ -82,7 +85,7 @@ def buscar(
             estado_procesamiento=archivo.estado_procesamiento,
             subido_en=archivo.subido_en,
             caso_numero=caso.numero_caso,
-            fragmento_texto=None if q.lower() in archivo.nombre_original.lower() else fragmento(archivo.ocr_texto, q),
+            fragmento_texto=None if q.lower() in archivo.nombre_original.lower() else (fragmento(archivo.ocr_texto, q) or fragmento(archivo.transcripcion_texto, q)),
         )
         for archivo, caso in filas
     ]

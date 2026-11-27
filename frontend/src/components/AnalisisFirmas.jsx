@@ -30,6 +30,9 @@ function Recortador({ archivo, valor, onCambio, onCerrar }) {
   const [imagen, setImagen] = useState({ clave: null, url: null, paginas: 1, error: null });
   const clave = `${archivo.id}|${pagina}`;
   const [rect, setRect] = useState(valor?.recorte || null);
+  // Sprint 8 (historia 41): zonas sugeridas por la ubicación automática.
+  const [candidatos, setCandidatos] = useState(null);
+  const [detectando, setDetectando] = useState(false);
   const marco = useRef(null);
   const inicio = useRef(null);
 
@@ -74,6 +77,27 @@ function Recortador({ archivo, valor, onCambio, onCerrar }) {
     setRect((r) => (r && (r.ancho < 0.02 || r.alto < 0.02) ? null : r));
   };
 
+  const zona = (c) => ({ x: c.x, y: c.y, ancho: c.ancho, alto: c.alto });
+  const detectar = async () => {
+    setDetectando(true);
+    try {
+      const { data } = await api.get(`/archivos/${archivo.id}/firmas/ubicar`, { params: { pagina } });
+      setCandidatos(data.candidatos);
+      if (data.candidatos.length) setRect(zona(data.candidatos[0]));
+    } catch (err) {
+      const d = err.response?.data?.detail;
+      setCandidatos([]);
+      setImagen((i) => ({ ...i, error: typeof d === "string" ? d : "No se pudo ubicar la firma." }));
+    } finally {
+      setDetectando(false);
+    }
+  };
+  const cambiarPagina = (n) => {
+    setPagina(n);
+    setRect(null);
+    setCandidatos(null);
+  };
+
   const redondear = (r) => r && Object.fromEntries(Object.entries(r).map(([k, v]) => [k, Math.round(v * 10000) / 10000]));
 
   return (
@@ -86,19 +110,26 @@ function Recortador({ archivo, valor, onCambio, onCerrar }) {
           <h3 className="font-headline-sm text-headline-sm text-on-surface truncate">Ubicar la firma — {archivo.nombre_original}</h3>
           {imagen.paginas > 1 && (
             <div className="flex items-center gap-1 font-label-code-sm text-label-code-sm text-on-surface-variant">
-              <button disabled={pagina <= 1} onClick={() => { setPagina(pagina - 1); setRect(null); }} className="disabled:opacity-40">
+              <button disabled={pagina <= 1} onClick={() => cambiarPagina(pagina - 1)} className="disabled:opacity-40">
                 <span className="material-symbols-outlined text-base">chevron_left</span>
               </button>
               Página {pagina}/{imagen.paginas}
-              <button disabled={pagina >= imagen.paginas} onClick={() => { setPagina(pagina + 1); setRect(null); }} className="disabled:opacity-40">
+              <button disabled={pagina >= imagen.paginas} onClick={() => cambiarPagina(pagina + 1)} className="disabled:opacity-40">
                 <span className="material-symbols-outlined text-base">chevron_right</span>
               </button>
             </div>
           )}
         </div>
         <p className="font-body-sm text-body-sm text-outline">
-          Arrastra el mouse para encerrar solo la firma (sin sellos, líneas ni texto impreso). Sin rectángulo se usa la página completa.
+          Arrastra el mouse para encerrar solo la firma (sin sellos, líneas ni texto impreso), o usa "Detectar firma". Sin rectángulo se usa la página completa.
         </p>
+        {candidatos && (
+          <p className={`font-body-sm text-body-sm ${candidatos.length ? "text-on-surface-variant" : "text-error"}`}>
+            {candidatos.length
+              ? `Se encontraron ${candidatos.length} zona(s) posibles (en amarillo). Se marcó la más probable: ${candidatos[0].motivo}. Haz clic en otra para elegirla o corrige con el mouse.`
+              : "No se encontró ninguna firma en esta página. Márcala a mano con el mouse."}
+          </p>
+        )}
         <div className="flex-1 min-h-0 overflow-auto rounded-lg bg-white border border-outline-variant/40 flex items-start justify-center">
           {cargando ? (
             <p className="p-space-md font-body-sm text-body-sm text-neutral-500">Cargando página…</p>
@@ -114,6 +145,16 @@ function Recortador({ archivo, valor, onCambio, onCerrar }) {
               onMouseLeave={soltar}
             >
               <img src={imagen.url} alt={archivo.nombre_original} draggable={false} className="block max-h-[64vh] w-auto" />
+              {candidatos?.map((c, i) => (
+                <button
+                  key={i}
+                  title={`Zona sugerida: ${c.motivo}`}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={() => setRect(zona(c))}
+                  className="absolute border-2 border-dashed border-amber-400 hover:bg-amber-400/20"
+                  style={{ left: `${c.x * 100}%`, top: `${c.y * 100}%`, width: `${c.ancho * 100}%`, height: `${c.alto * 100}%` }}
+                />
+              ))}
               {rect && (
                 <div
                   className="absolute border-2 border-primary bg-primary/10 pointer-events-none"
@@ -124,6 +165,14 @@ function Recortador({ archivo, valor, onCambio, onCerrar }) {
           )}
         </div>
         <div className="flex justify-end gap-2">
+          <button
+            onClick={detectar}
+            disabled={detectando || cargando}
+            className="mr-auto px-3 py-1.5 rounded-md font-label-ui text-label-ui text-primary border border-primary/40 hover:bg-primary/10 disabled:opacity-50 flex items-center gap-1"
+          >
+            <span className="material-symbols-outlined text-base">{detectando ? "hourglass_top" : "frame_inspect"}</span>
+            {detectando ? "Buscando firma…" : "Detectar firma"}
+          </button>
           <button onClick={() => setRect(null)} className="px-3 py-1.5 rounded-md font-label-ui text-label-ui text-on-surface-variant hover:bg-surface-container-high">
             Página completa
           </button>
@@ -274,6 +323,34 @@ export default function AnalisisFirmas({ caso, archivos }) {
   const alternar = (id) => setPatrones(idsPatrones.includes(id) ? idsPatrones.filter((x) => x !== id) : [...idsPatrones, id]);
   const entrada = (id) => ({ archivo_id: id, pagina: zonas[id]?.pagina || 1, recorte: zonas[id]?.recorte || null });
 
+  // Sprint 8 (historia 41): ubica la firma de cada documento elegido de una sola vez.
+  const [ubicando, setUbicando] = useState(false);
+  const ubicarTodas = async () => {
+    setUbicando(true);
+    const ids = [idDub, ...idsPatrones];
+    const nuevas = { ...zonas };
+    let encontradas = 0;
+    for (const id of ids) {
+      const pagina = zonas[id]?.pagina || 1;
+      try {
+        const { data } = await api.get(`/archivos/${id}/firmas/ubicar`, { params: { pagina } });
+        const c = data.candidatos[0];
+        if (c) {
+          nuevas[id] = { pagina, recorte: { x: c.x, y: c.y, ancho: c.ancho, alto: c.alto }, auto: true };
+          encontradas += 1;
+        }
+      } catch {
+        /* ese documento se queda como estaba */
+      }
+    }
+    setZonas(nuevas);
+    setUbicando(false);
+    notificar(
+      `Se ubicó la firma en ${encontradas} de ${ids.length} documentos. Revísalas con el botón de recorte antes de analizar.`,
+      { tipo: encontradas === ids.length ? "success" : "info" },
+    );
+  };
+
   const analizar = async () => {
     setAnalizando(true);
     try {
@@ -298,7 +375,7 @@ export default function AnalisisFirmas({ caso, archivos }) {
   const zonaTexto = (id) => {
     const z = zonas[id];
     if (!z?.recorte) return z?.pagina > 1 ? `pág. ${z.pagina}, completa` : "página completa";
-    return `pág. ${z.pagina}, zona marcada`;
+    return `pág. ${z.pagina}, ${z.auto ? "zona detectada" : "zona marcada"}`;
   };
   const BotonZona = ({ a }) =>
     puedeAnalizar && (
@@ -363,6 +440,14 @@ export default function AnalisisFirmas({ caso, archivos }) {
               >
                 <span className="material-symbols-outlined text-base">{analizando ? "hourglass_top" : "analytics"}</span>
                 {analizando ? "Analizando…" : "Analizar firmas"}
+              </button>
+              <button
+                onClick={ubicarTodas}
+                disabled={ubicando || analizando}
+                className="px-4 py-2 rounded-md border border-primary/40 text-primary font-label-ui text-label-ui hover:bg-primary/10 disabled:opacity-50 flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-base">{ubicando ? "hourglass_top" : "frame_inspect"}</span>
+                {ubicando ? "Ubicando firmas…" : "Ubicar firmas automáticamente"}
               </button>
               {idsPatrones.length < 2 && <span className="font-body-sm text-body-sm text-error">Elige al menos 2 patrones.</span>}
             </div>
