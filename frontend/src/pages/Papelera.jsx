@@ -81,7 +81,7 @@ export default function Papelera() {
                       c.dias_restantes <= 5 ? "text-error" : "text-on-surface-variant"
                     }`}
                   >
-                    {c.dias_restantes} día(s)
+                    {c.retenido ? "Retenido (evidencia)" : `${c.dias_restantes} día(s)`}
                   </span>
                 </td>
                 <td className="px-space-md py-4 text-right">

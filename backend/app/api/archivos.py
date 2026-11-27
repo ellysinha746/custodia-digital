@@ -30,6 +30,7 @@ from app.services.integridad_service import revisar_archivo, notificar_alerta
 from app.services import cotejo_service  # Sprint 6 (historia 23)
 from app.services import ocr_service  # Sprint 7 (historia 29)
 from app.services.ficha_service import normalizar_ficha
+from app.services import virustotal_service  # Sprint 8 (historia 38)
 router = APIRouter(tags=["archivos"])
 
 
@@ -454,4 +455,23 @@ def cotejar_hash(
     db.commit()
     if alerta:
         background_tasks.add_task(notificar_alerta, alerta.id)
+    return resultado
+@router.post("/archivos/{archivo_id}/virustotal")
+def consultar_virustotal(
+    archivo_id: UUID,
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(get_current_user),
+):
+    """Consulta el SHA-256 de la evidencia en VirusTotal (solo el hash sale del sistema)."""
+    archivo = _archivo_listo(db, archivo_id, usuario_actual)
+    resultado = virustotal_service.consultar_hash(archivo.hash_original)
+    db.add(
+        LogCustodia(
+            archivo_id=archivo.id,
+            usuario_id=usuario_actual.id,
+            accion=AccionEnum.verificacion,
+            resultado=f"virustotal_{resultado['estado']}",
+        )
+    )
+    db.commit()
     return resultado

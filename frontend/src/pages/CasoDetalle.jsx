@@ -8,6 +8,7 @@ import FichaDispositivo, { CamposFicha } from "../components/FichaDispositivo";
 import VersionesObservadas from "../components/VersionesObservadas";
 import MetadatosTecnicos from "../components/MetadatosTecnicos";
 import HashesEvidencia from "../components/HashesEvidencia";
+import VirusTotal from "../components/VirusTotal";
 import RolGrafotecnico, { InsigniaRol } from "../components/RolGrafotecnico";
 import CotejoGrafotecnico from "../components/CotejoGrafotecnico";
 import { esCasoGrafotecnia } from "../grafotecnia";
@@ -329,7 +330,9 @@ function FilaArchivo({ archivo, caso, archivos, onCambio }) {
                 puedeCotejar={puede(usuario, "verificar_integridad")}
                 onCambio={onCambio}
                 onHistorial={cargarHistorial}
+          
               />
+              <VirusTotal archivo={archivo} onHistorial={cargarHistorial} />
 
               <MetadatosTecnicos
                 archivo={archivo}
@@ -601,7 +604,7 @@ export default function CasoDetalle() {
               {est.siguiente === "cerrado" ? "Cerrar caso" : "Pasar a en proceso"}
             </button>
           )}
-          {puede(usuario, "eliminar_caso") && esTitular && (
+          {puede(usuario, "eliminar_caso") && esTitular && !cerrado && (
             <button
               onClick={eliminarCaso}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-error hover:bg-error/10 font-label-ui text-label-ui"

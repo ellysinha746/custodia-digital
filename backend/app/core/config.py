@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     TSA_TIMEOUT_SEG: float = 8
     TSA_CA_FILE: str = ""      # vacío → app/certs/freetsa_cacert.pem
     TSA_CERT_FILE: str = ""    # vacío → app/certs/freetsa_tsa.crt
+    # Sprint 8 (historia 38): consulta de reputación del hash en VirusTotal (solo el hash, nunca el archivo).
+    VIRUSTOTAL_API_KEY: str = ""   # vacío → la función queda desactivada
+    VIRUSTOTAL_TIMEOUT_SEG: float = 8
 
     # Sprint 7 (historia 29): OCR con Tesseract dentro del servidor.
     OCR_IDIOMA: str = "spa"

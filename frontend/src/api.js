@@ -1,7 +1,8 @@
 import axios from "axios";
 import { actualizarTokens, limpiarSesion, obtenerAccessToken, obtenerRefreshToken } from "./sesion";
 
-const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+
+const BASE = "http://custodia-alb-103203170.us-east-1.elb.amazonaws.com";
 const api = axios.create({ baseURL: BASE });
 
 api.interceptors.request.use((config) => {
