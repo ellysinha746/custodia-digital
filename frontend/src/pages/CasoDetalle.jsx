@@ -13,6 +13,7 @@ import RolGrafotecnico, { InsigniaRol } from "../components/RolGrafotecnico";
 import CotejoGrafotecnico from "../components/CotejoGrafotecnico";
 import { esCasoGrafotecnia } from "../grafotecnia";
 import TextoOCR from "../components/TextoOCR";
+import TranscripcionAudio from "../components/TranscripcionAudio";
 import ComparacionTexto from "../components/ComparacionTexto";
 import BorradorIA from "../components/BorradorIA";
 import AnalisisFirmas from "../components/AnalisisFirmas";
@@ -317,6 +318,14 @@ function FilaArchivo({ archivo, caso, archivos, onCambio }) {
               <TextoOCR
                 archivo={archivo}
                 puedeLeer={puede(usuario, "verificar_integridad")}
+                onCambio={onCambio}
+                onHistorial={cargarHistorial}
+              />
+
+              {/* Sprint 8 (historia 40) */}
+              <TranscripcionAudio
+                archivo={archivo}
+                puedeTranscribir={puede(usuario, "verificar_integridad")}
                 onCambio={onCambio}
                 onHistorial={cargarHistorial}
               />

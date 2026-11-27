@@ -51,7 +51,11 @@ services:
       - minio
     volumes:
       - ./backend:/app
+      # Sprint 8 (historia 40): el modelo de Whisper se descarga una sola vez y queda aquí
+      # (no se pierde al reconstruir la imagen).
+      - modelos:/modelos
 
 volumes:
   pgdata:
   miniodata:
+  modelos:

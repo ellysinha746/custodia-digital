@@ -29,6 +29,7 @@ from app.services.hashing_service import calcular_sha256, calcular_hashes
 from app.services.integridad_service import revisar_archivo, notificar_alerta
 from app.services import cotejo_service  # Sprint 6 (historia 23)
 from app.services import ocr_service  # Sprint 7 (historia 29)
+from app.services import transcripcion_service  # Sprint 8 (historia 40)
 from app.services.ficha_service import normalizar_ficha
 from app.services import virustotal_service  # Sprint 8 (historia 38)
 router = APIRouter(tags=["archivos"])
@@ -201,6 +202,13 @@ def _programar_ocr(db: Session, archivo: Archivo, usuario_actual, background_tas
         db.commit()
         db.refresh(archivo)
         background_tasks.add_task(ocr_service.procesar, archivo.id, usuario_actual.id)
+    # Sprint 8 (historia 40): audio y video se transcriben con Whisper (los muy largos, a pedido).
+    duracion = transcripcion_service.duracion_segundos(archivo)
+    corto = duracion is None or duracion <= settings.WHISPER_MAX_MINUTOS * 60
+    if settings.WHISPER_AUTOMATICO and corto and transcripcion_service.preparar(archivo):
+        db.commit()
+        db.refresh(archivo)
+        background_tasks.add_task(transcripcion_service.procesar, archivo.id, usuario_actual.id)
 
 
 @router.get("/casos/{caso_id}/archivos", response_model=List[ArchivoOut])
