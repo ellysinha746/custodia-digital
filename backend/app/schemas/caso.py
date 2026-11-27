@@ -31,3 +31,4 @@ class CasoEstadoUpdate(BaseModel):
 class CasoPapeleraOut(CasoOut):
     eliminado_en: datetime
     dias_restantes: int
+    retenido: bool = False

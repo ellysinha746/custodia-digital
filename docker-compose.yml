@@ -22,8 +22,8 @@ services:
     restart: always
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: custodia_minio
-      MINIO_ROOT_PASSWORD: custodia_minio_2026
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -32,6 +32,7 @@ services:
 
   api:
     build: ./backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --no-server-header
     restart: always
     ports:
       - "8000:8000"
@@ -42,8 +43,8 @@ services:
       # Para volver al disco local, cambia STORAGE_BACKEND a "local".
       STORAGE_BACKEND: s3
       S3_ENDPOINT_URL: http://minio:9000
-      S3_ACCESS_KEY: custodia_minio
-      S3_SECRET_KEY: custodia_minio_2026
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       S3_BUCKET: custodia-evidencias
     depends_on:
       - db

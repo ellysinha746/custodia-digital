@@ -108,17 +108,22 @@ def listar_papelera(
         Caso.eliminado_en.isnot(None), Caso.eliminado_en < limite, condicion_casos_visibles(usuario_actual)
     )
     for caso in vencidos.all():
-        db.delete(caso)
-    db.commit()
+        if caso.archivos:
+            continue  # con evidencia no se purga: retención de custodia
+        try:
+            with db.begin_nested():
+                db.delete(caso)
+        except IntegrityError:
+            pass  # tiene otros registros (p. ej. historial): se retiene
 
     query = db.query(Caso).filter(
-        Caso.eliminado_en.isnot(None), Caso.eliminado_en >= limite, condicion_casos_visibles(usuario_actual)
+        Caso.eliminado_en.isnot(None), condicion_casos_visibles(usuario_actual)
     )
-
     resultado = []
     for caso in query.order_by(Caso.eliminado_en.desc()).all():
         vence = caso.eliminado_en + timedelta(days=settings.DIAS_PAPELERA)
         dias_restantes = max((vence - datetime.now(timezone.utc)).days, 0)
+        retenido = vence <= datetime.now(timezone.utc)
         resultado.append(
             CasoPapeleraOut(
                 id=caso.id,
@@ -130,6 +135,7 @@ def listar_papelera(
                 creado_en=caso.creado_en,
                 eliminado_en=caso.eliminado_en,
                 dias_restantes=dias_restantes,
+                retenido=retenido
             )
         )
     return resultado
@@ -154,6 +160,8 @@ def actualizar_estado_caso(
     exigir(usuario_actual, "cambiar_estado_caso")
     caso = _obtener_caso_propio(db, caso_id, usuario_actual)
     _exigir_titular(caso, usuario_actual)
+    if caso.estado == EstadoCasoEnum.cerrado:
+        raise HTTPException(status_code=409, detail="Un caso cerrado no se puede eliminar.")
     if caso.estado == EstadoCasoEnum.cerrado:
         raise HTTPException(
             status_code=409,
